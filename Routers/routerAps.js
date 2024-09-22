@@ -99,7 +99,7 @@ atencaobasica.get('/geolocalizacao', async (req, res) => {
 atencaobasica.get('/has_clinico', async (req, res) => {
   let {equipe} = req.query;
   if (!equipe) {
-    mes = null;
+    equipe = null;
   }
   const result = await new apsRepository().hasClinico(equipe);
   res.status(200).send(result);
