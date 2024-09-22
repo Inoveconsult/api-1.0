@@ -55,6 +55,24 @@ class baseRopository {
     }
   }
 
+  async getSemParametro(funcao){
+    try{
+      const result = (await pool.query(`SELECT * FROM ${funcao}()`)).rows;
+      return result;
+    }catch(error){      
+      throw error;
+    }
+  }
+
+  async getParametroMes(funcao, p1){
+    try{
+      const result = (await pool.query(`SELECT * FROM ${funcao}($1)`,[p1])).rows;
+      return result;
+    }catch(error){      
+      throw error;
+    }
+  }
+
 };
 
 

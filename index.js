@@ -10,6 +10,7 @@ import criarfunction from './Routers/routerFunctionOdonto.js';
 import consultaodonto from './Routers/teste.js';
 import odontologia from './Routers/routerOdonto.js';
 import atencaobasica from './Routers/routerAps.js';
+import utilitarios from './Routers/routerUtils.js';
 
 
 const app = express();
@@ -22,6 +23,7 @@ app.use('/', criarfunction);
 app.use('/', consultaodonto);
 app.use('/', odontologia);
 app.use('/', atencaobasica);
+app.use('/', utilitarios);
 
 // const server = process.env.URL_BACKEND;
 // testarConexao();

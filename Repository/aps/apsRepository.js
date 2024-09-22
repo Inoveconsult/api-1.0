@@ -47,6 +47,60 @@ class apsRepository extends baseRopository{
         throw error;
       }
     };
+
+    async visitaDomiciliar(p1, p2, p3){
+      try {
+        const result = await super.getAll('visita_domiciliar_diaria', p1, p2, p3,);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async geolocalizacao(p1, p2, p3){
+      try {
+        const result = await super.getAll('geolocalizacao', p1, p2, p3);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async hasClinico(funcao, p1){
+      try {
+        const result = await super.getParametroMes('has_clinico', p1);
+        return result;
+      } catch (error) {
+        throw error;        
+      }
+    }
+
+    async hasAutorreferido(funcao, p1) {
+      try {
+        const result = await super.getParametroMes('has_autorreferidos', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async hasSexo(funcao, p1) {
+      try {
+        const result = await super.getParametroMes('has_sexo', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async hasFxEtaria(funcao, p1) {
+      try {
+        const result = await super.getParametroMes('has_fx_etaria', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
   
 };
 
