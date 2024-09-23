@@ -66,36 +66,45 @@ class apsRepository extends baseRopository{
       }
     }
 
-    async hasClinico(funcao, p1){
+    async hasClinico(p1){
       try {
-        const result = await super.getParametroMes('has_clinico', p1);
-        return result;
+        const result = await super.getParametroEquipe('has_clinico', p1);
+           return result;
       } catch (error) {
         throw error;        
       }
     }
 
-    async hasAutorreferido(funcao, p1) {
+    async hasAutorreferido(p1) {
       try {
-        const result = await super.getParametroMes('has_autorreferidos', p1);
+        const result = await super.getParametroEquipe('has_autorreferidos', p1);
         return result;
       } catch (error) {
         throw error;
       }
     }
 
-    async hasSexo(funcao, p1) {
+    async hasSexo(p1) {
       try {
-        const result = await super.getParametroMes('has_sexo', p1);
+        const result = await super.getParametroEquipe('has_sexo', p1);
         return result;
       } catch (error) {
         throw error;
       }
     }
 
-    async hasFxEtaria(funcao, p1) {
+    async hasFxEtaria(p1) {
       try {
-        const result = await super.getParametroMes('has_fx_etaria', p1);
+        const result = await super.getParametroEquipe('has_fx_etaria', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async hasTotalAtendidos(p1) {
+      try {
+        const result = await super.getParametroEquipe('has_atendidos', p1);
         return result;
       } catch (error) {
         throw error;

@@ -102,6 +102,7 @@ atencaobasica.get('/has_clinico', async (req, res) => {
     equipe = null;
   }
   const result = await new apsRepository().hasClinico(equipe);
+  console.log(equipe)
   res.status(200).send(result);
 })
 
@@ -132,5 +133,15 @@ atencaobasica.get('/has_fx_etaria', async (req, res) => {
   res.status(200).send(result);
 })
 
+
+atencaobasica.get('/has_atendidos', async (req, res) => {
+  let {equipe} = req.query;
+    if (!equipe) {
+      equipe = null;
+    }
+
+    const result = await new apsRepository().hasTotalAtendidos(equipe);
+    res.status(200).send(result);
+})
 
 export default atencaobasica;

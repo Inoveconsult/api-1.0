@@ -64,9 +64,9 @@ class baseRopository {
     }
   }
 
-  async getParametroMes(funcao, p1){
+  async getParametroEquipe(funcao, p1){
     try{
-      const result = (await pool.query(`SELECT * FROM ${funcao}($1)`,[p1])).rows;
+      const result = (await pool.query(`SELECT * FROM ${funcao}($1)`, [p1])).rows;
       return result;
     }catch(error){      
       throw error;

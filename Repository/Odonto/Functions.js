@@ -1287,7 +1287,7 @@ const functions = [
         JOIN tb_dim_faixa_etaria tdfe 
             ON tdfe.co_seq_dim_faixa_etaria = fact.idade
         WHERE 
-        (p_equipe IS NULL OR tde.nu_ine = p_equipe) and  tb_fat_cidadao_pec.st_faleceu = 0
+        (tde.nu_ine = p_equipe or p_equipe IS NULL) and  tb_fat_cidadao_pec.st_faleceu = 0
         GROUP BY 
             fact.fciCidadaoPec, 
             fact.nuCns, 
@@ -1619,7 +1619,7 @@ const functions = [
                     ON tds.co_seq_dim_sexo = fact.sexo
                 JOIN tb_dim_faixa_etaria tdfe 
                     ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE tde.nu_ine IS NOT NULL
+                WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
             ) AS teste
             GROUP BY teste.idade
         ) AS t1
@@ -1690,13 +1690,45 @@ const functions = [
                     ON tds.co_seq_dim_sexo = fact.sexo
                 JOIN tb_dim_faixa_etaria tdfe 
                     ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE tde.nu_ine IS NOT NULL
+                WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
             ) AS teste2
             GROUP BY teste2.idade
         ) AS t2
         ON t1.idade= t2.idade;	
     end;
     $$`
+  },
+
+  {name: 'Atendimento HAS',
+    definition: `CREATE OR REPLACE FUNCTION has_atendidos(
+        p_equipe varchar default null
+        )	
+    RETURNS TABLE (has_atendidos INTEGER)
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN   
+        -- Contar os atendimentos nos últimos 12 meses
+        RETURN QUERY
+        SELECT COUNT(*)::INTEGER 
+        FROM tb_fat_atendimento_individual tfai
+        INNER JOIN tb_dim_equipe tde 
+            ON tde.co_seq_dim_equipe = tfai.co_dim_equipe_1 
+        WHERE  AGE(CURRENT_DATE, to_date(tfai.co_dim_tempo::text, 'YYYYMMDD')) <= INTERVAL '12 MONTH' 
+            ---to_date(tfai.co_dim_tempo::text, 'YYYYMMDD') >= (v_data - INTERVAL '12 MONTH')
+        --AND to_date(tfai.co_dim_tempo::text, 'YYYYMMDD') <= v_data
+        AND (tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
+            OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
+            OR tfai.ds_filtro_cids IN (
+                '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
+                '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
+                '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+            ))
+        -- Condição da equipe
+        AND (p_equipe IS NULL OR tde.nu_ine = p_equipe);
+        --AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfai.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_mes)
+        --AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfai.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_ano);
+    END;
+    $$;`
   },
 
   /*-------------------------------------------------------*/ 
@@ -1910,7 +1942,42 @@ const functions = [
         order by tdp.no_profissional asc;	
     end;
     $$` 
-    }
+    },
+
+{name: 'Listar ESB',
+ definition: `create or replace function listar_esb()
+    returns table (ine varchar, nomeequipe varchar)
+    language plpgsql
+    as $$
+    begin
+        return query
+        select 
+        nu_ine,
+        no_equipe
+        from tb_dim_equipe tde 
+        where tde.no_equipe like ('ESB%') and st_registro_valido = 1
+        order by no_equipe;
+    end;
+    $$`
+},
+
+{name: 'Lista ESF',
+  definition: `create or replace function listar_esf()
+    returns table (ine varchar, nomeequipe varchar)
+    language plpgsql
+    as $$
+    begin
+        return query
+        select 
+        nu_ine,
+        no_equipe
+        from tb_dim_equipe tde 
+        where tde.no_equipe not like ('ESB%') and 
+        st_registro_valido = 1
+        order by no_equipe;
+    end;
+    $$`
+}
 ];
 
 
