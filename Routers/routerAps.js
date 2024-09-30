@@ -96,13 +96,29 @@ atencaobasica.get('/geolocalizacao', async (req, res) => {
   res.status(200).send(result);
 })
 
+atencaobasica.get('/calcular_iaf', async (req, res) => {
+  let {cnes, mes, ano} = req.query;
+  if (!cnes) {
+    cnes = null;
+  }
+  if (!mes) {
+    mes = null;
+  }
+  if (!ano) {
+    ano = null;
+  }
+  const result = await new apsRepository().calcularIaf(cnes, mes, ano);
+  res.status(200).send(result);
+})
+
+//HIPERTENSOS
+
 atencaobasica.get('/has_clinico', async (req, res) => {
   let {equipe} = req.query;
   if (!equipe) {
     equipe = null;
   }
-  const result = await new apsRepository().hasClinico(equipe);
-  console.log(equipe)
+  const result = await new apsRepository().hasClinico(equipe); 
   res.status(200).send(result);
 })
 
@@ -133,15 +149,67 @@ atencaobasica.get('/has_fx_etaria', async (req, res) => {
   res.status(200).send(result);
 })
 
-
-atencaobasica.get('/has_atendidos', async (req, res) => {
+atencaobasica.get('/hipertensos_atendidos', async (req, res) => {
   let {equipe} = req.query;
     if (!equipe) {
       equipe = null;
     }
-
+    // if (!mes) {
+    //   mes = null;
+    // }    
+    // if (!ano) {
+    //   ano = null;
+    // }
     const result = await new apsRepository().hasTotalAtendidos(equipe);
     res.status(200).send(result);
 })
+
+//DIABETICOS
+atencaobasica.get('/diabeticos_clinicos', async (req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  const result = await new apsRepository().dmClinicos(equipe);
+  res.status(200).send(result);
+})
+
+atencaobasica.get('/diabeticos_autorreferidos', async (req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe = null
+  }
+  const result = await new apsRepository().dmAutorreferidos(equipe);
+  res.status(200).send(result);
+}),
+
+atencaobasica.get('/diabeticos_fx_etaria', async (req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  const result = await new apsRepository().dmFxEtaria(equipe);
+  res.status(200).send(result);
+})
+
+atencaobasica.get('/diabeticos_atendidos', async (req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  const result = await new apsRepository().dmAtendidos(equipe);
+  res.status(200).send(result);
+})
+
+atencaobasica.get('/diabeticos_sexo', async (req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  const result = await new apsRepository().dmSexo(equipe);
+  res.status(200).send(result);
+})
+
+
 
 export default atencaobasica;

@@ -26,7 +26,7 @@ app.use('/', atencaobasica);
 app.use('/', utilitarios);
 
 // const server = process.env.URL_BACKEND;
-// testarConexao();
+ testarConexao();
 
 // console.log(`${server}`);
 

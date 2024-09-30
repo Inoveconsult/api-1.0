@@ -66,6 +66,17 @@ class apsRepository extends baseRopository{
       }
     }
 
+    async calcularIaf(p1, p2, p3) {
+      try {
+        const result = await super.getAll('calcular_iaf', p1, p2, p3);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+
+    //HIPERTENSOS
     async hasClinico(p1){
       try {
         const result = await super.getParametroEquipe('has_clinico', p1);
@@ -104,12 +115,59 @@ class apsRepository extends baseRopository{
 
     async hasTotalAtendidos(p1) {
       try {
-        const result = await super.getParametroEquipe('has_atendidos', p1);
+        const result = await super.getParametroEquipe('hipertensos_atendidos', p1);
         return result;
       } catch (error) {
         throw error;
       }
     }
+
+    //DIABETICOS
+    async dmClinicos(p1) {
+      try {
+        const result = await super.getParametroEquipe('diabeticos_clinico', p1);
+        return result;
+      } catch (error) {
+        throw error;        
+      }
+    }
+
+    async dmAutorreferidos(p1) {
+      try {
+        const result = await super.getParametroEquipe('diabeticos_autorreferidos', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async dmFxEtaria(p1) {
+      try {
+        const result = await super.getParametroEquipe('diabeticos_fx_etaria', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async dmAtendidos(p1) {
+      try {
+        const result = await super.getParametroEquipe('diabeticos_atendidos', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async dmSexo(p1) {
+      try {
+        const result = await super.getParametroEquipe('diabeticos_sexo', p1);
+        return result
+      } catch (error) {
+        throw error;
+      }
+    }
+
   
 };
 

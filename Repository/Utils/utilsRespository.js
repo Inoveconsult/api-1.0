@@ -29,6 +29,24 @@ class utilsRepository extends baseRopository{
     }
   }
 
+  async listarCategorias() {
+    try {
+      const result = await super.getSemParametro('getcategorias');
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async listarCnes() {
+    try {
+      const result = await super.getSemParametro('listar_cnes');
+        return result;      
+    } catch (error) {
+      throw error;
+    }
+  }
+
 
 }
 

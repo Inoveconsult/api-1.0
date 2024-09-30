@@ -19,4 +19,14 @@ utilitarios.get('/listar_esf', async (req, res) => {
   res.status(200).send(result);
 })
 
+utilitarios.get('/listar_categorias', async (req, res) => {
+  const result = await new utilsRepository().listarCategorias()
+  res.status(200).send(result);
+})
+
+utilitarios.get('/listar_cnes', async(req, res) => {
+  const result = await new utilsRepository().listarCnes();
+  res.status(200).send(result);
+})
+
 export default utilitarios;
