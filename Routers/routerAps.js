@@ -39,6 +39,17 @@ atencaobasica.get('/idosos_65_anos_mais', async (req, res) => {
   res.status(200).send(result);
 })
 
+atencaobasica.get('/bolsa_familia', async (req, res) => {
+  let {equipe} = req.query;
+  if(!equipe){
+    equipe = null;
+  }
+  const result = await new apsRepository().bolsa_familia(equipe);
+  console.log(equipe);
+  
+  res.status(200).send(result);
+})
+
 atencaobasica.get('/fci_atualizadas', async (req, res) => {
   let {equipe, data} = req.query;
   if(!equipe){
@@ -81,18 +92,24 @@ atencaobasica.get('/visita_domiciliar', async (req, res) => {
   res.status(200).send(result);
 })
 
-atencaobasica.get('/geolocalizacao', async (req, res) => {
-  let {profissional, mes, ano} = req.query;
-  if(!profissional) {
-    profissional = null;    
+atencaobasica.get('/cadastro_domiciliar', async (req, res) => {
+  let {profissional, equipe} = req.query;
+  if(!profissional){
+    profissional = null;
   }
-  if(!mes) {
-    mes = null;
+  if (!equipe) {
+    equipe = null;
   }
-  if(!ano){
-    ano = null;
+  const result = await new apsRepository().cadastroDomiciliar(profissional, equipe);
+  res.status(200).send(result);
+})
+
+atencaobasica.get('/geolocalizacao_domiciliar', async (req, res) => {
+  let {profissional} = req.query;
+  if (!profissional) {
+    profissional = null;
   }
-  const result = await new apsRepository().geolocalizacao(profissional, mes, ano);  
+  const result = await new apsRepository().geolocalizacaoDomiciliar(profissional);
   res.status(200).send(result);
 })
 

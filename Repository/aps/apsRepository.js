@@ -30,6 +30,15 @@ class apsRepository extends baseRopository{
     }
   }
 
+  async bolsa_familia(p1) {
+    try {
+      const result = await super.getBolsaFamilia('bolsa_familia', p1);
+      return result;
+    } catch (error) {
+      throw error;      
+    }
+  }
+
   async fciAtualizadas(p1, p2) {
     try {
       const result = await super.getVinculado('fci_atualizadas', p1, p2);
@@ -57,9 +66,18 @@ class apsRepository extends baseRopository{
       }
     }
 
-    async geolocalizacao(p1, p2, p3){
+    async cadastroDomiciliar(p1, p2) {
       try {
-        const result = await super.getAll('geolocalizacao', p1, p2, p3);
+        const result = await super.getMensal('cadastro_domiciliar', p1, p2);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async geolocalizacaoDomiciliar(p1) {
+      try {
+        const result = await super.getParametroEquipe('geolocalizacao_domiciliar', p1);
         return result;
       } catch (error) {
         throw error;
