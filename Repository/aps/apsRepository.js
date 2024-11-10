@@ -93,6 +93,15 @@ class apsRepository extends baseRopository{
       }
     }
 
+    async calcularPse() {
+      try {
+        const result = await super.getSemParametro('calcula_pse');
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
 
     //HIPERTENSOS
     async hasClinico(p1){

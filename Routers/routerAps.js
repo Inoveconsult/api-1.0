@@ -4,20 +4,20 @@ import apsRepository from "../Repository/aps/apsRepository.js";
 const atencaobasica = Router();
 
 atencaobasica.get('/cidadao_vinculado', async (req, res) => {
-  let {equipe, data} = req.query;  
-  if (!equipe){
+  let { equipe, data } = req.query;
+  if (!equipe) {
     equipe = null;
   }
-  if (!data){
+  if (!data) {
     data = null;
   }
-  const result = await new apsRepository().cidadaoVinculado(equipe, data);  
+  const result = await new apsRepository().cidadaoVinculado(equipe, data);
   res.status(200).send(result);
 })
 
 atencaobasica.get('/crianca_ate_5_anos', async (req, res) => {
-  let {equipe, data} = req.query;
-  if (!equipe){
+  let { equipe, data } = req.query;
+  if (!equipe) {
     equipe = null;
   }
   if (!data) {
@@ -28,8 +28,8 @@ atencaobasica.get('/crianca_ate_5_anos', async (req, res) => {
 })
 
 atencaobasica.get('/idosos_65_anos_mais', async (req, res) => {
-  let {equipe, data} = req.query;
-  if(!equipe){
+  let { equipe, data } = req.query;
+  if (!equipe) {
     equipe = null;
   }
   if (!data) {
@@ -40,22 +40,20 @@ atencaobasica.get('/idosos_65_anos_mais', async (req, res) => {
 })
 
 atencaobasica.get('/bolsa_familia', async (req, res) => {
-  let {equipe} = req.query;
-  if(!equipe){
+  let { equipe } = req.query;
+  if (!equipe) {
     equipe = null;
   }
   const result = await new apsRepository().bolsa_familia(equipe);
-  console.log(equipe);
-  
   res.status(200).send(result);
 })
 
 atencaobasica.get('/fci_atualizadas', async (req, res) => {
-  let {equipe, data} = req.query;
-  if(!equipe){
-    equipe = null;    
+  let { equipe, data } = req.query;
+  if (!equipe) {
+    equipe = null;
   }
-  if(!data){
+  if (!data) {
     data = null;
   }
   const result = await new apsRepository().fciAtualizadas(equipe, data);
@@ -63,38 +61,38 @@ atencaobasica.get('/fci_atualizadas', async (req, res) => {
 })
 
 atencaobasica.get('/registro_diario_aps', async (req, res) => {
-  let {categoria, mes, ano} = req.query;
-  if(!categoria) {
-    categoria = null;    
+  let { categoria, mes, ano } = req.query;
+  if (!categoria) {
+    categoria = null;
   }
-  if(!mes) {
+  if (!mes) {
     mes = null;
   }
-  if(!ano){
+  if (!ano) {
     ano = null;
-  } 
-  const result = await new apsRepository().atendimentoDiarioAps(categoria, mes, ano);  
+  }
+  const result = await new apsRepository().atendimentoDiarioAps(categoria, mes, ano);
   res.status(200).send(result);
 })
 
 atencaobasica.get('/visita_domiciliar', async (req, res) => {
-  let {equipe, mes, ano} = req.query;
-  if(!equipe) {
-    equipe = null;    
+  let { equipe, mes, ano } = req.query;
+  if (!equipe) {
+    equipe = null;
   }
-  if(!mes) {
+  if (!mes) {
     mes = null;
   }
-  if(!ano){
+  if (!ano) {
     ano = null;
-  } 
+  }
   const result = await new apsRepository().visitaDomiciliar(equipe, mes, ano);
   res.status(200).send(result);
 })
 
 atencaobasica.get('/cadastro_domiciliar', async (req, res) => {
-  let {profissional, equipe} = req.query;
-  if(!profissional){
+  let { profissional, equipe } = req.query;
+  if (!profissional) {
     profissional = null;
   }
   if (!equipe) {
@@ -105,7 +103,7 @@ atencaobasica.get('/cadastro_domiciliar', async (req, res) => {
 })
 
 atencaobasica.get('/geolocalizacao_domiciliar', async (req, res) => {
-  let {profissional} = req.query;
+  let { profissional } = req.query;
   if (!profissional) {
     profissional = null;
   }
@@ -114,7 +112,7 @@ atencaobasica.get('/geolocalizacao_domiciliar', async (req, res) => {
 })
 
 atencaobasica.get('/calcular_iaf', async (req, res) => {
-  let {cnes, mes, ano} = req.query;
+  let { cnes, mes, ano } = req.query;
   if (!cnes) {
     cnes = null;
   }
@@ -128,20 +126,24 @@ atencaobasica.get('/calcular_iaf', async (req, res) => {
   res.status(200).send(result);
 })
 
+atencaobasica.get('/calcular_pse', async(req, res) => {
+  const result = await new apsRepository().calcularPse();
+  res.status(200).send(result);
+})
 //HIPERTENSOS
 
 atencaobasica.get('/has_clinico', async (req, res) => {
-  let {equipe} = req.query;
+  let { equipe } = req.query;
   if (!equipe) {
     equipe = null;
   }
-  const result = await new apsRepository().hasClinico(equipe); 
+  const result = await new apsRepository().hasClinico(equipe);
   res.status(200).send(result);
 })
 
 atencaobasica.get('/has_autorreferido', async (req, res) => {
-  let {equipe} = req.query;
-  if(!equipe) {
+  let { equipe } = req.query;
+  if (!equipe) {
     equipe = null;
   }
   const result = await new apsRepository().hasAutorreferido(equipe);
@@ -149,8 +151,8 @@ atencaobasica.get('/has_autorreferido', async (req, res) => {
 })
 
 atencaobasica.get('/has_sexo', async (req, res) => {
-  let {equipe} = req.query;
-  if(!equipe) {
+  let { equipe } = req.query;
+  if (!equipe) {
     equipe = null;
   }
   const result = await new apsRepository().hasSexo(equipe);
@@ -158,32 +160,32 @@ atencaobasica.get('/has_sexo', async (req, res) => {
 })
 
 atencaobasica.get('/has_fx_etaria', async (req, res) => {
-  let {equipe} = req.query;
-  if(!equipe) {
-    equipe =null;
+  let { equipe } = req.query;
+  if (!equipe) {
+    equipe = null;
   }
   const result = await new apsRepository().hasFxEtaria(equipe);
   res.status(200).send(result);
 })
 
 atencaobasica.get('/hipertensos_atendidos', async (req, res) => {
-  let {equipe} = req.query;
-    if (!equipe) {
-      equipe = null;
-    }
-    // if (!mes) {
-    //   mes = null;
-    // }    
-    // if (!ano) {
-    //   ano = null;
-    // }
-    const result = await new apsRepository().hasTotalAtendidos(equipe);
-    res.status(200).send(result);
+  let { equipe } = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  // if (!mes) {
+  //   mes = null;
+  // }    
+  // if (!ano) {
+  //   ano = null;
+  // }
+  const result = await new apsRepository().hasTotalAtendidos(equipe);
+  res.status(200).send(result);
 })
 
 //DIABETICOS
 atencaobasica.get('/diabeticos_clinicos', async (req, res) => {
-  let {equipe} = req.query;
+  let { equipe } = req.query;
   if (!equipe) {
     equipe = null;
   }
@@ -192,7 +194,7 @@ atencaobasica.get('/diabeticos_clinicos', async (req, res) => {
 })
 
 atencaobasica.get('/diabeticos_autorreferidos', async (req, res) => {
-  let {equipe} = req.query;
+  let { equipe } = req.query;
   if (!equipe) {
     equipe = null
   }
@@ -200,17 +202,17 @@ atencaobasica.get('/diabeticos_autorreferidos', async (req, res) => {
   res.status(200).send(result);
 }),
 
-atencaobasica.get('/diabeticos_fx_etaria', async (req, res) => {
-  let {equipe} = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  const result = await new apsRepository().dmFxEtaria(equipe);
-  res.status(200).send(result);
-})
+  atencaobasica.get('/diabeticos_fx_etaria', async (req, res) => {
+    let { equipe } = req.query;
+    if (!equipe) {
+      equipe = null;
+    }
+    const result = await new apsRepository().dmFxEtaria(equipe);
+    res.status(200).send(result);
+  })
 
 atencaobasica.get('/diabeticos_atendidos', async (req, res) => {
-  let {equipe} = req.query;
+  let { equipe } = req.query;
   if (!equipe) {
     equipe = null;
   }
@@ -219,7 +221,7 @@ atencaobasica.get('/diabeticos_atendidos', async (req, res) => {
 })
 
 atencaobasica.get('/diabeticos_sexo', async (req, res) => {
-  let {equipe} = req.query;
+  let { equipe } = req.query;
   if (!equipe) {
     equipe = null;
   }

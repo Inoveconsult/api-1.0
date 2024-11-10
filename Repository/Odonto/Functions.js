@@ -1030,6 +1030,7 @@ const functions = [
     END;
     $$ LANGUAGE plpgsql;`
     },
+
     {name: 'Bolsa Familia',
         definition: `create or replace function bolsa_familia(
                 p_equipe varchar default null)
@@ -1332,39 +1333,164 @@ const functions = [
     {
         name: 'Calcular IAF',
         definition: `CREATE OR REPLACE FUNCTION calcular_iaf(
-            param_cnes VARCHAR DEFAULT NULL,
-            param_mes INTEGER DEFAULT NULL,
-            param_ano INTEGER DEFAULT NULL
-        )
-        RETURNS TABLE (
-            cnes VARCHAR,
-            UBS VARCHAR,
-            total_fichas BIGINT
-        ) AS $$
-        BEGIN
+                param_cnes VARCHAR DEFAULT NULL,
+                param_mes INTEGER DEFAULT NULL,
+                param_ano INTEGER DEFAULT NULL
+            )
+            RETURNS TABLE (
+                cnes VARCHAR,
+                UBS VARCHAR,
+                total_fichas BIGINT,
+                MODALIDADE VARCHAR
+            ) AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT
+                    tdus.nu_cnes AS cnes,
+                    tdus.no_unidade_saude AS UBS,        
+                    COUNT(*) AS total_fichas,
+                    (case  when co_dim_cbo in (751, 791, 1327) then 'II COM PEF 20H' else 'I SEM PEF' END)::VARCHAR as MODALIDADE
+                FROM
+                    tb_fat_atividade_coletiva tfac
+                INNER JOIN
+                    tb_dim_unidade_saude tdus ON tdus.co_seq_dim_unidade_saude = tfac.co_dim_unidade_saude
+                WHERE
+                    (param_cnes IS NULL OR tdus.nu_cnes = param_cnes) AND
+                    (param_mes IS NULL OR EXTRACT(MONTH FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_mes) AND
+                    (param_ano IS NULL OR EXTRACT(YEAR FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_ano) AND
+                    --AGE(CURRENT_DATE, TO_DATE(tfac.co_dim_tempo::TEXT, 'YYYYMMDD')) <= INTERVAL '1 year' AND
+                    --tfac.co_dim_tipo_atividade = 6 AND
+                    tfac.ds_filtro_pratica_em_saude in ('|11|', '|30|11|', '|30|')        
+                GROUP BY
+                    tdus.no_unidade_saude,
+                    tdus.nu_cnes,
+                    co_dim_cbo
+                ORDER BY
+                    total_fichas desc;        
+            END;
+            $$ LANGUAGE plpgsql;`
+    },
+
+    {
+        name:'Calcula PSE',
+        definition:`create or replace function calcula_pse()
+            returns table(
+            QTD_ESCOLAS_ATENDIDAS INTEGER,
+            QTD_ESCOLAS_ACOES_REALIZDAS INTEGER
+            )
+        language PLPGSQL
+        as $$
+        begin
             RETURN QUERY
-            SELECT
-                tdus.nu_cnes AS cnes,
-                tdus.no_unidade_saude AS UBS,        
-                COUNT(*) AS total_fichas
-            FROM
-                tb_fat_atividade_coletiva tfac
-            INNER JOIN
-                tb_dim_unidade_saude tdus ON tdus.co_seq_dim_unidade_saude = tfac.co_dim_unidade_saude
-            WHERE
-                (param_cnes IS NULL OR tdus.nu_cnes = param_cnes) AND
-                (param_mes IS NULL OR EXTRACT(MONTH FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_mes) AND
-                (param_ano IS NULL OR EXTRACT(YEAR FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_ano) AND
-                --AGE(CURRENT_DATE, TO_DATE(tfac.co_dim_tempo::TEXT, 'YYYYMMDD')) <= INTERVAL '1 year' AND
-                --tfac.co_dim_tipo_atividade = 6 AND
-                tfac.ds_filtro_pratica_em_saude in ('|11|', '|30|11|', '|30|')        
-            GROUP BY
-                tdus.no_unidade_saude,
-                tdus.nu_cnes
-            ORDER BY
-                total_fichas desc;        
-        END;
-        $$ LANGUAGE plpgsql;`
+                WITH CTE_ESCOLAS_REGISTRADAS AS( 
+                select count(*) as TOTAL_ESCOLAS from (
+                select ds_filtro_tema_para_saude, ds_filtro_pratica_em_saude, co_dim_inep, co_dim_tempo 
+                from (
+                SELECT 
+                    ds_filtro_tema_para_saude,
+                    ds_filtro_pratica_em_saude, 
+                    co_dim_inep, 
+                    co_dim_tempo,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY co_dim_inep
+                        ORDER BY co_dim_inep ASC
+                    ) AS rn
+                FROM 
+                    tb_fat_atividade_coletiva tfac
+                WHERE 
+                    (
+                    ds_filtro_tema_para_saude LIKE '%|1|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|5|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|7|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|13|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|14|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|15|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|16|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|17|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|19|%' OR 
+                    ds_filtro_tema_para_saude LIKE '%|29|%' OR
+                    ds_filtro_pratica_em_saude LIKE '%|2|%' OR 
+                    ds_filtro_pratica_em_saude LIKE '%|3|%' OR 
+                    ds_filtro_pratica_em_saude LIKE '%|9|%' OR 
+                    ds_filtro_pratica_em_saude LIKE '%|11|%' OR 
+                    ds_filtro_pratica_em_saude LIKE '%|20|%' OR 
+                    ds_filtro_pratica_em_saude LIKE '%|22|%' OR 
+                    ds_filtro_pratica_em_saude LIKE '%|24|%' OR 
+                    ds_filtro_pratica_em_saude LIKE '%|30|%'
+                    )
+                    AND co_dim_tempo >= '20230101' 
+                    AND (co_dim_inep IS NOT null and co_dim_inep > 1)
+                    AND co_dim_inep IN (
+                        SELECT co_dim_inep 
+                        FROM tb_fat_atividade_coletiva
+                        WHERE 
+                            ds_filtro_tema_para_saude LIKE '%|1|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|5|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|7|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|13|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|14|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|15|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|16|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|17|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|19|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|29|%' OR
+                            ds_filtro_pratica_em_saude LIKE '%|2|%' OR 
+                            ds_filtro_pratica_em_saude LIKE '%|3|%' OR 
+                            ds_filtro_pratica_em_saude LIKE '%|9|%' OR 
+                            ds_filtro_pratica_em_saude LIKE '%|11|%' OR 
+                            ds_filtro_pratica_em_saude LIKE '%|20|%' OR 
+                            ds_filtro_pratica_em_saude LIKE '%|22|%' OR 
+                            ds_filtro_pratica_em_saude LIKE '%|24|%' OR 
+                            ds_filtro_pratica_em_saude LIKE '%|30|%'
+                    ) 
+                ) as escolasregistradapse where rn = 1 order by escolasregistradapse.co_dim_inep asc) as atingidaspse
+            ), CTE_ACOES_REGISTRADAS as (
+                select COUNT(*) as ACOES_ESCOLAS from (
+                SELECT 
+                    ds_filtro_tema_para_saude,
+                    ds_filtro_pratica_em_saude, 
+                    co_dim_inep, 
+                    co_dim_tempo,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY co_dim_inep
+                        ORDER BY co_dim_inep ASC
+                    ) AS rn
+                FROM 
+                    tb_fat_atividade_coletiva tfac
+                WHERE 
+                    (   
+                        (ds_filtro_tema_para_saude LIKE '%|1|%' OR
+                        ds_filtro_pratica_em_saude LIKE '%|11|%' OR
+                        ds_filtro_pratica_em_saude LIKE '%|20|%') OR
+                        ds_filtro_tema_para_saude LIKE '%|5|%' OR 
+                        ds_filtro_tema_para_saude LIKE '%|13|%' OR 
+                        ds_filtro_tema_para_saude LIKE '%|16|%' OR 
+                        ds_filtro_tema_para_saude LIKE '%|17|%' 	        
+                    )
+                    AND co_dim_tempo >= '20230101' 
+                    AND (co_dim_inep IS NOT null and co_dim_inep > 1)
+                    AND co_dim_inep IN (
+                        SELECT co_dim_inep 
+                        FROM tb_fat_atividade_coletiva
+                        WHERE	                
+                        (ds_filtro_tema_para_saude LIKE '%|1|%' OR
+                        ds_filtro_pratica_em_saude LIKE '%|11|%' AND 
+                        ds_filtro_pratica_em_saude LIKE '%|20|%') OR
+                        ds_filtro_tema_para_saude LIKE '%|5|%' OR 
+                        ds_filtro_tema_para_saude LIKE '%|13|%' OR 
+                        ds_filtro_tema_para_saude LIKE '%|16|%' OR 
+                        ds_filtro_tema_para_saude LIKE '%|17|%' 	        
+                        ) 
+                ) as ACOESPSE where rn = 1
+            )
+            SELECT 
+                CTE_ESCOLAS_REGISTRADAS.TOTAL_ESCOLAS::INTEGER,
+                CTE_ACOES_REGISTRADAS.ACOES_ESCOLAS::INTEGER
+            FROM 
+                CTE_ESCOLAS_REGISTRADAS,
+                CTE_ACOES_REGISTRADAS;	
+        end;
+        $$`
     },
     /*-----------------HIPERTENSOS---------------------------*/
     {
