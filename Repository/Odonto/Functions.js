@@ -694,266 +694,256 @@ const functions = [
     {
         name: 'Cidadao Vinculado',
         definition: `CREATE OR REPLACE FUNCTION cidadao_vinculado(
-        p_equipe varchar DEFAULT NULL,
-        p_data date DEFAULT NULL)
-    RETURNS TABLE(cidadao_vinculado integer)
-    LANGUAGE plpgsql
-    AS $$
-    declare
-        v_data varchar;
-    begin
-        -- Se p_data for fornecida, converte para o formato 'YYYYMMDD', caso contrário, usa a data atual
-        if p_data is not null then
-            v_data := to_char(p_data, 'YYYYMMDD');
-        else
-            v_data := to_char(CURRENT_DATE, 'YYYYMMDD');
-        end if;
-        return query
-        select count(*)::integer as cidadao_vinculado
-        from (
-            select
-                tde.nu_ine ine_equipe, 
-                tb_fat_cidadao_pec.co_seq_fat_cidadao_pec  as cod_cidadao,
-                tb_fat_cidadao_pec.no_cidadao as nome_cidadao,
-                fact.nuCns as cns_cidadao,
-                fact.cpf as cpf_cidadao,
-                fact.noNomeMae as no_mome_mae,
-                fact.dtNascimento as dt_nascimento		
-            from
-                (
-                    select
-                        tb_fat_cad_individual.co_dim_tipo_saida_cadastro as coDimTipoSaidaCadastro,
-                        tb_fat_cad_individual.co_dim_equipe as coDimEquipe,
-                        tb_fat_cad_individual.nu_cns as nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao as cpf,
-                        tb_fat_cad_individual.co_fat_cidadao_pec as fciCidadaoPec,
-                        tb_fat_cad_individual.co_dim_profissional as coDimProf,
-                        cad_individual.no_mae_cidadao as noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento as dtNascimento					
-                    from
-                        tb_fat_cad_individual tb_fat_cad_individual
-                        join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro = tb_fat_cad_individual.co_dim_tipo_saida_cadastro
-                        join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    where
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
-                        and exists (
-                            select
-                                1
-                            from
-                                tb_fat_cidadao tb_fat_cidadao
-                            where
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                -- Substituição por v_data convertido para bigint
-                                and tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > v_data::bigint
-                                and tb_fat_cidadao.co_dim_tempo <= v_data::bigint
-                        )
-                        and tb_fat_cad_individual.st_ficha_inativa = 0
-                    and exists (
+            p_equipe varchar DEFAULT NULL,
+            p_data date DEFAULT NULL)
+        RETURNS TABLE(cidadao_vinculado integer)
+        LANGUAGE plpgsql
+        AS $$
+        declare
+            v_data varchar;
+        begin
+            -- Se p_data for fornecida, converte para o formato 'YYYYMMDD', caso contrário, usa a data atual
+            if p_data is not null then
+                v_data := to_char(p_data, 'YYYYMMDD');
+            else
+                v_data := to_char(CURRENT_DATE, 'YYYYMMDD');
+            end if;
+
+            return query
+            select count(*)::integer as cidadao_vinculado
+            from (
+                select
+                    fact.nuCns as cns_cidadao,
+                    fact.cpf as cpf_cidadao		
+                from
+                    (
                         select
-                            1
+                            tb_fat_cad_individual.co_dim_tipo_saida_cadastro as coDimTipoSaidaCadastro,
+                            tb_fat_cad_individual.co_dim_equipe as coDimEquipe,
+                            tb_fat_cad_individual.nu_cns as nuCns,
+                            tb_fat_cad_individual.nu_cpf_cidadao as cpf,
+                            tb_fat_cad_individual.co_fat_cidadao_pec as fciCidadaoPec,
+                            tb_fat_cad_individual.co_dim_profissional as coDimProf,
+                            cad_individual.no_mae_cidadao as noNomeMae,
+                            tb_fat_cad_individual.dt_nascimento as dtNascimento					
                         from
-                            tb_fat_cidadao tb_fat_cidadao
-                            join tb_fat_cidadao tbFatCidadaoRaizz on tb_fat_cidadao.co_fat_cidadao_raiz = tbFatCidadaoRaizz.co_fat_cidadao_raiz
+                            tb_fat_cad_individual tb_fat_cad_individual
+                            join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro = tb_fat_cad_individual.co_dim_tipo_saida_cadastro
+                            join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
                         where
-                            tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                            and (
-                                tbFatCidadaoRaizz.co_dim_tempo_validade > v_data::bigint
-                                and tbFatCidadaoRaizz.co_dim_tempo <= v_data::bigint
-                            and (
-                                tbFatCidadaoRaizz.st_vivo = 1
-                                and tbFatCidadaoRaizz.st_mudou = 0
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
+                            and exists (
+                                select
+                                    1
+                                from
+                                    tb_fat_cidadao tb_fat_cidadao
+                                where
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    and tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > v_data::bigint
+                                    and tb_fat_cidadao.co_dim_tempo <= v_data::bigint
                             )
-                    ))
-                    and tb_dim_tipo_saida_cadastro.nu_identificador = '-') as fact
-            left join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on fact.coDimTipoSaidaCadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-            join tb_fat_cidadao_pec tb_fat_cidadao_pec on fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-            join tb_dim_profissional tb_dim_profissional on fact.coDimProf = tb_dim_profissional.co_seq_dim_profissional
-            inner join tb_dim_equipe tde on fact.coDimEquipe = tde.co_seq_dim_equipe
-            where p_equipe is null or tde.nu_ine = p_equipe
-        ) as vinculados;
-    end;
-    $$`
+                            and tb_fat_cad_individual.st_ficha_inativa = 0
+                            and exists (
+                                select
+                                    1
+                                from
+                                    tb_fat_cidadao tb_fat_cidadao
+                                    join tb_fat_cidadao tbFatCidadaoRaizz on tb_fat_cidadao.co_fat_cidadao_raiz = tbFatCidadaoRaizz.co_fat_cidadao_raiz
+                                where
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    and tbFatCidadaoRaizz.co_dim_tempo_validade > v_data::bigint
+                                    and tbFatCidadaoRaizz.co_dim_tempo <= v_data::bigint
+                                    and tbFatCidadaoRaizz.st_vivo = 1
+                                    and tbFatCidadaoRaizz.st_mudou = 0
+                            )
+                            and tb_dim_tipo_saida_cadastro.nu_identificador = '-') as fact
+                left join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on fact.coDimTipoSaidaCadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                join tb_fat_cidadao_pec tb_fat_cidadao_pec on fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                join tb_dim_profissional tb_dim_profissional on fact.coDimProf = tb_dim_profissional.co_seq_dim_profissional
+                inner join tb_dim_equipe tde on fact.coDimEquipe = tde.co_seq_dim_equipe
+                where p_equipe is null or tde.nu_ine = p_equipe
+                -- Aplicação de GROUP BY para garantir unicidade e otimização
+                group by
+                    fact.nuCns,
+                    fact.cpf          
+            ) as vinculados;
+        end;
+        $$;`
     },
 
     {
         name: 'Criancas ate 5 anos',
         definition: `CREATE OR REPLACE FUNCTION crianca_ate_5_anos(
-        p_equipe varchar DEFAULT NULL,
-        p_data date DEFAULT NULL)
-    RETURNS TABLE(criancas integer)
-    LANGUAGE plpgsql
-    AS $$
-    declare
-        v_data varchar;
-    begin
-        -- Se p_data for fornecida, converte para o formato 'YYYYMMDD', caso contrário, usa a data atual
-        if p_data is not null then
-            v_data := to_char(p_data, 'YYYYMMDD');
-        else
-            v_data := to_char(CURRENT_DATE, 'YYYYMMDD');
-        end if;
-        return query
-        select count(*)::integer as cidadao_vinculado
-        from (
-        select
-        fact.coDimEquipe,
-        fact.ine as ine,
-        tb_fat_cidadao_pec.no_cidadao as nome_cidadao,
-        fact.nuCns as cns_cidadao,
-        fact.cpf as cpf_cidadao,
-        fact.noNomeMae as no_mome_mae,
-        fact.dtNascimento as dt_nascimento,
-        fact.idade as idade,
-        tb_dim_profissional.nu_cns as cns_profissional,
-        tb_dim_profissional.no_profissional as nome_profissional       
-    from
-        (
-            select
-                tb_fat_cad_individual.co_dim_tipo_saida_cadastro as coDimTipoSaidaCadastro,
-                tb_fat_cad_individual.nu_cns as nuCns,
-                tb_fat_cad_individual.nu_cpf_cidadao as cpf,
-                tb_fat_cad_individual.co_fat_cidadao_pec as fciCidadaoPec,
-                tb_fat_cad_individual.co_dim_profissional as coDimProf,
-                cad_individual.no_mae_cidadao as noNomeMae,
-                tb_fat_cad_individual.dt_nascimento as dtNascimento,
-                EXTRACT(YEAR FROM AGE(to_date(CURRENT_DATE::text, 'YYYY-MM-DD'), TO_DATE(CAST(tb_fat_cad_individual.dt_nascimento AS TEXT), 'YYYY-MM-DD')))::INTEGER AS idade,
-                tde.co_seq_dim_equipe as coDimEquipe,    
-                tde.nu_ine as ine
+                p_equipe varchar DEFAULT NULL,
+                p_data date DEFAULT NULL)
+            RETURNS TABLE(criancas integer)
+            LANGUAGE plpgsql
+            AS $$
+            declare
+                v_data varchar;
+            begin
+                -- Se p_data for fornecida, converte para o formato 'YYYYMMDD', caso contrário, usa a data atual
+                if p_data is not null then
+                    v_data := to_char(p_data, 'YYYYMMDD');
+                else
+                    v_data := to_char(CURRENT_DATE, 'YYYYMMDD');
+                end if;
+                return query
+                select count(*)::integer as cidadao_vinculado
+                from (
+                select
+                fact.nuCns as cns_cidadao,
+                fact.cpf as cpf_cidadao,
+                fact.idade as idade
             from
-                tb_fat_cad_individual tb_fat_cad_individual
-                join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro = tb_fat_cad_individual.co_dim_tipo_saida_cadastro
-                join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                join tb_dim_equipe tde on tde.co_seq_dim_equipe = tb_fat_cad_individual.co_dim_equipe
-            where
-                tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
-                and exists (
-                            select
-                                1
-                            from
-                                tb_fat_cidadao tb_fat_cidadao
-                            where
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                -- Substituição por v_data convertido para bigint
-                                and tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > v_data::bigint
-                                and tb_fat_cidadao.co_dim_tempo <= v_data::bigint
-                        )
-                    and tb_fat_cad_individual.st_ficha_inativa = 0
-                    and exists (
-                        select
-                            1
-                        from
-                            tb_fat_cidadao tb_fat_cidadao
-                            join tb_fat_cidadao tbFatCidadaoRaizz on tb_fat_cidadao.co_fat_cidadao_raiz = tbFatCidadaoRaizz.co_fat_cidadao_raiz
-                        where
-                            tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                            and (
-                                tbFatCidadaoRaizz.co_dim_tempo_validade > v_data::bigint
-                                and tbFatCidadaoRaizz.co_dim_tempo <= v_data::bigint
-                            and (
-                                tbFatCidadaoRaizz.st_vivo = 1
-                                and tbFatCidadaoRaizz.st_mudou = 0
-                            )
-                    ))
-            and tb_dim_tipo_saida_cadastro.nu_identificador = '-') as fact
-            left join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on fact.coDimTipoSaidaCadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-            join tb_fat_cidadao_pec tb_fat_cidadao_pec on fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-            join tb_dim_profissional tb_dim_profissional on fact.coDimProf = tb_dim_profissional.co_seq_dim_profissional
-            inner join tb_dim_equipe tde on fact.coDimEquipe = tde.co_seq_dim_equipe
-            where (p_equipe is null or tde.nu_ine = p_equipe) and fact.idade <= 5
-        ) as vinculados;
-    end;
-    $$`
+                (
+                    select
+                        tb_fat_cad_individual.co_dim_tipo_saida_cadastro as coDimTipoSaidaCadastro,
+                        tb_fat_cad_individual.nu_cns as nuCns,
+                        tb_fat_cad_individual.nu_cpf_cidadao as cpf,
+                        tb_fat_cad_individual.co_fat_cidadao_pec as fciCidadaoPec,
+                        tb_fat_cad_individual.co_dim_profissional as coDimProf,
+                        cad_individual.no_mae_cidadao as noNomeMae,
+                        tb_fat_cad_individual.dt_nascimento as dtNascimento,
+                        EXTRACT(YEAR FROM AGE(to_date(CURRENT_DATE::text, 'YYYY-MM-DD'), TO_DATE(CAST(tb_fat_cad_individual.dt_nascimento AS TEXT), 'YYYY-MM-DD')))::INTEGER AS idade,
+                        tde.co_seq_dim_equipe as coDimEquipe,    
+                        tde.nu_ine as ine
+                    from
+                        tb_fat_cad_individual tb_fat_cad_individual
+                        join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro = tb_fat_cad_individual.co_dim_tipo_saida_cadastro
+                        join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                        join tb_dim_equipe tde on tde.co_seq_dim_equipe = tb_fat_cad_individual.co_dim_equipe
+                    where
+                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
+                        and exists (
+                                    select
+                                        1
+                                    from
+                                        tb_fat_cidadao tb_fat_cidadao
+                                    where
+                                        tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                        -- Substituição por v_data convertido para bigint
+                                        and tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > v_data::bigint
+                                        and tb_fat_cidadao.co_dim_tempo <= v_data::bigint
+                                )
+                            and tb_fat_cad_individual.st_ficha_inativa = 0
+                            and exists (
+                                select
+                                    1
+                                from
+                                    tb_fat_cidadao tb_fat_cidadao
+                                    join tb_fat_cidadao tbFatCidadaoRaizz on tb_fat_cidadao.co_fat_cidadao_raiz = tbFatCidadaoRaizz.co_fat_cidadao_raiz
+                                where
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    and (
+                                        tbFatCidadaoRaizz.co_dim_tempo_validade > v_data::bigint
+                                        and tbFatCidadaoRaizz.co_dim_tempo <= v_data::bigint
+                                    and (
+                                        tbFatCidadaoRaizz.st_vivo = 1
+                                        and tbFatCidadaoRaizz.st_mudou = 0
+                                    )
+                            ))
+                    and tb_dim_tipo_saida_cadastro.nu_identificador = '-') as fact
+                    left join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on fact.coDimTipoSaidaCadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                    join tb_fat_cidadao_pec tb_fat_cidadao_pec on fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                    join tb_dim_profissional tb_dim_profissional on fact.coDimProf = tb_dim_profissional.co_seq_dim_profissional
+                    inner join tb_dim_equipe tde on fact.coDimEquipe = tde.co_seq_dim_equipe
+                    where (p_equipe is null or tde.nu_ine = p_equipe) and fact.idade <= 5
+                    group by
+                        fact.nuCns,
+                        fact.cpf,
+                        fact.idade
+                ) as vinculados;
+            end;
+            $$`
     },
     
 
     {
         name: 'Idosos 60 anos ou +',
         definition: `CREATE OR REPLACE FUNCTION idosos_65_anos_mais(
-        p_equipe varchar DEFAULT NULL,
-        p_data date DEFAULT NULL)
-    RETURNS TABLE(idosos integer)
-    LANGUAGE plpgsql
-    AS $$
-    declare
-        v_data varchar;
-    begin
-        -- Se p_data for fornecida, converte para o formato 'YYYYMMDD', caso contrário, usa a data atual
-        if p_data is not null then
-            v_data := to_char(p_data, 'YYYYMMDD');
-        else
-            v_data := to_char(CURRENT_DATE, 'YYYYMMDD');
-        end if;
-        return query
-        select count(*)::integer as cidadao_vinculado
-        from (
-        select
-        fact.coDimEquipe,
-        fact.ine as ine,
-        tb_fat_cidadao_pec.no_cidadao as nome_cidadao,
-        fact.nuCns as cns_cidadao,
-        fact.cpf as cpf_cidadao,
-        fact.noNomeMae as no_mome_mae,
-        fact.dtNascimento as dt_nascimento,
-        fact.idade as idade,
-        tb_dim_profissional.nu_cns as cns_profissional,
-        tb_dim_profissional.no_profissional as nome_profissional 		      
-    from
-        (
-            select
-                tb_fat_cad_individual.co_dim_tipo_saida_cadastro as coDimTipoSaidaCadastro,
-                tb_fat_cad_individual.nu_cns as nuCns,
-                tb_fat_cad_individual.nu_cpf_cidadao as cpf,
-                tb_fat_cad_individual.co_fat_cidadao_pec as fciCidadaoPec,
-                tb_fat_cad_individual.co_dim_profissional as coDimProf,
-                cad_individual.no_mae_cidadao as noNomeMae,
-                tb_fat_cad_individual.dt_nascimento as dtNascimento,
-                EXTRACT(YEAR FROM AGE(to_date(CURRENT_DATE::text, 'YYYY-MM-DD'), TO_DATE(CAST(tb_fat_cad_individual.dt_nascimento AS TEXT), 'YYYY-MM-DD')))::INTEGER AS idade,
-                tde.co_seq_dim_equipe as coDimEquipe,    
-                tde.nu_ine as ine
-            from
-                tb_fat_cad_individual tb_fat_cad_individual
-                join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro = tb_fat_cad_individual.co_dim_tipo_saida_cadastro
-                join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                join tb_dim_equipe tde on tde.co_seq_dim_equipe = tb_fat_cad_individual.co_dim_equipe
-            where			
-                tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
-                and exists (
+            p_equipe varchar DEFAULT NULL,
+            p_data date DEFAULT NULL)
+        RETURNS TABLE(idosos integer)
+        LANGUAGE plpgsql
+        AS $$
+        declare
+            v_data varchar;
+        begin
+            -- Se p_data for fornecida, converte para o formato 'YYYYMMDD', caso contrário, usa a data atual
+            if p_data is not null then
+                v_data := to_char(p_data, 'YYYYMMDD');
+            else
+                v_data := to_char(CURRENT_DATE, 'YYYYMMDD');
+            end if;
+            return query
+            select count(*)::integer as cidadao_vinculado
+            from (
+            select	
+            fact.nuCns as cns_cidadao,
+            fact.cpf as cpf_cidadao,
+            fact.idade as idade	      
+        from
+            (
+                select
+                    tb_fat_cad_individual.co_dim_tipo_saida_cadastro as coDimTipoSaidaCadastro,
+                    tb_fat_cad_individual.nu_cns as nuCns,
+                    tb_fat_cad_individual.nu_cpf_cidadao as cpf,
+                    tb_fat_cad_individual.co_fat_cidadao_pec as fciCidadaoPec,
+                    tb_fat_cad_individual.co_dim_profissional as coDimProf,
+                    cad_individual.no_mae_cidadao as noNomeMae,
+                    tb_fat_cad_individual.dt_nascimento as dtNascimento,
+                    EXTRACT(YEAR FROM AGE(to_date(CURRENT_DATE::text, 'YYYY-MM-DD'), TO_DATE(CAST(tb_fat_cad_individual.dt_nascimento AS TEXT), 'YYYY-MM-DD')))::INTEGER AS idade,
+                    tde.co_seq_dim_equipe as coDimEquipe,    
+                    tde.nu_ine as ine
+                from
+                    tb_fat_cad_individual tb_fat_cad_individual
+                    join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro = tb_fat_cad_individual.co_dim_tipo_saida_cadastro
+                    join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                    join tb_dim_equipe tde on tde.co_seq_dim_equipe = tb_fat_cad_individual.co_dim_equipe
+                where			
+                    tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
+                    and exists (
+                                select
+                                    1
+                                from
+                                    tb_fat_cidadao tb_fat_cidadao
+                                where
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    -- Substituição por v_data convertido para bigint
+                                    and tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > v_data::bigint
+                                    and tb_fat_cidadao.co_dim_tempo <= v_data::bigint
+                            )
+                        and tb_fat_cad_individual.st_ficha_inativa = 0
+                        and exists (
                             select
                                 1
                             from
                                 tb_fat_cidadao tb_fat_cidadao
+                                join tb_fat_cidadao tbFatCidadaoRaizz on tb_fat_cidadao.co_fat_cidadao_raiz = tbFatCidadaoRaizz.co_fat_cidadao_raiz
                             where
                                 tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                -- Substituição por v_data convertido para bigint
-                                and tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > v_data::bigint
-                                and tb_fat_cidadao.co_dim_tempo <= v_data::bigint
-                        )
-                    and tb_fat_cad_individual.st_ficha_inativa = 0
-                    and exists (
-                        select
-                            1
-                        from
-                            tb_fat_cidadao tb_fat_cidadao
-                            join tb_fat_cidadao tbFatCidadaoRaizz on tb_fat_cidadao.co_fat_cidadao_raiz = tbFatCidadaoRaizz.co_fat_cidadao_raiz
-                        where
-                            tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                            and (
-                                tbFatCidadaoRaizz.co_dim_tempo_validade > v_data::bigint
-                                and tbFatCidadaoRaizz.co_dim_tempo <= v_data::bigint
-                            and (
-                                tbFatCidadaoRaizz.st_vivo = 1
-                                and tbFatCidadaoRaizz.st_mudou = 0
-                            )
-                    ))
-            and tb_dim_tipo_saida_cadastro.nu_identificador = '-') as fact
-            left join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on fact.coDimTipoSaidaCadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-            join tb_fat_cidadao_pec tb_fat_cidadao_pec on fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-            join tb_dim_profissional tb_dim_profissional on fact.coDimProf = tb_dim_profissional.co_seq_dim_profissional
-            inner join tb_dim_equipe tde on fact.coDimEquipe = tde.co_seq_dim_equipe
-            where (p_equipe is null or tde.nu_ine = p_equipe) and fact.idade >= 60
-        ) as vinculados;
-    end;
-    $$`
+                                and (
+                                    tbFatCidadaoRaizz.co_dim_tempo_validade > v_data::bigint
+                                    and tbFatCidadaoRaizz.co_dim_tempo <= v_data::bigint
+                                and (
+                                    tbFatCidadaoRaizz.st_vivo = 1
+                                    and tbFatCidadaoRaizz.st_mudou = 0
+                                )
+                        ))
+                and tb_dim_tipo_saida_cadastro.nu_identificador = '-') as fact
+                left join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on fact.coDimTipoSaidaCadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                join tb_fat_cidadao_pec tb_fat_cidadao_pec on fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                join tb_dim_profissional tb_dim_profissional on fact.coDimProf = tb_dim_profissional.co_seq_dim_profissional
+                inner join tb_dim_equipe tde on fact.coDimEquipe = tde.co_seq_dim_equipe
+                where (p_equipe is null or tde.nu_ine = p_equipe) and fact.idade >= 60
+                group by
+                    fact.nuCns,
+                    fact.cpf,
+                    fact.idade
+            ) as vinculados;
+        end;
+        $$`
     },
 
     {
@@ -1333,42 +1323,42 @@ const functions = [
     {
         name: 'Calcular IAF',
         definition: `CREATE OR REPLACE FUNCTION calcular_iaf(
-                param_cnes VARCHAR DEFAULT NULL,
-                param_mes INTEGER DEFAULT NULL,
-                param_ano INTEGER DEFAULT NULL
-            )
-            RETURNS TABLE (
-                cnes VARCHAR,
-                UBS VARCHAR,
-                total_fichas BIGINT,
-                MODALIDADE VARCHAR
-            ) AS $$
-            BEGIN
-                RETURN QUERY
-                SELECT
-                    tdus.nu_cnes AS cnes,
-                    tdus.no_unidade_saude AS UBS,        
-                    COUNT(*) AS total_fichas,
-                    (case  when co_dim_cbo in (751, 791, 1327) then 'II COM PEF 20H' else 'I SEM PEF' END)::VARCHAR as MODALIDADE
-                FROM
-                    tb_fat_atividade_coletiva tfac
-                INNER JOIN
-                    tb_dim_unidade_saude tdus ON tdus.co_seq_dim_unidade_saude = tfac.co_dim_unidade_saude
-                WHERE
-                    (param_cnes IS NULL OR tdus.nu_cnes = param_cnes) AND
-                    (param_mes IS NULL OR EXTRACT(MONTH FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_mes) AND
-                    (param_ano IS NULL OR EXTRACT(YEAR FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_ano) AND
-                    --AGE(CURRENT_DATE, TO_DATE(tfac.co_dim_tempo::TEXT, 'YYYYMMDD')) <= INTERVAL '1 year' AND
-                    --tfac.co_dim_tipo_atividade = 6 AND
-                    tfac.ds_filtro_pratica_em_saude in ('|11|', '|30|11|', '|30|')        
-                GROUP BY
-                    tdus.no_unidade_saude,
-                    tdus.nu_cnes,
-                    co_dim_cbo
-                ORDER BY
-                    total_fichas desc;        
-            END;
-            $$ LANGUAGE plpgsql;`
+            param_cnes VARCHAR DEFAULT NULL,
+            param_mes INTEGER DEFAULT NULL,
+            param_ano INTEGER DEFAULT NULL
+        )
+        RETURNS TABLE (
+            cnes VARCHAR,
+            UBS VARCHAR,
+            total_fichas BIGINT,
+            MODALIDADE VARCHAR
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT
+                tdus.nu_cnes AS cnes,
+                tdus.no_unidade_saude AS UBS,        
+                COUNT(*) AS total_fichas,
+                (case  when co_dim_cbo in (751, 791, 1327) then 'II COM PEF 20H' else 'I SEM PEF' END)::VARCHAR as MODALIDADE
+            FROM
+                tb_fat_atividade_coletiva tfac
+            INNER JOIN
+                tb_dim_unidade_saude tdus ON tdus.co_seq_dim_unidade_saude = tfac.co_dim_unidade_saude
+            WHERE
+                (param_cnes IS NULL OR tdus.nu_cnes = param_cnes) AND
+                (param_mes IS NULL OR EXTRACT(MONTH FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_mes) AND
+                (param_ano IS NULL OR EXTRACT(YEAR FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_ano) AND
+                --AGE(CURRENT_DATE, TO_DATE(tfac.co_dim_tempo::TEXT, 'YYYYMMDD')) <= INTERVAL '1 year' AND
+                --tfac.co_dim_tipo_atividade = 6 AND
+                tfac.ds_filtro_pratica_em_saude in ('|11|', '|30|11|', '|30|')        
+            GROUP BY
+                tdus.no_unidade_saude,
+                tdus.nu_cnes,			
+                modalidade
+            ORDER BY
+                total_fichas desc;        
+        END;
+        $$ LANGUAGE plpgsql;`
     },
 
     {
@@ -1496,114 +1486,17 @@ const functions = [
     {
         name: 'HAS Clinico',
         definition: `create or replace function has_clinico(
-        p_equipe varchar default null)
-    returns table(has_clinico integer)
-    language plpgsql
-    as $$
-    begin
-        return query
-        SELECT count(*)::integer
-    FROM (
-        SELECT distinct
-            fact.fciCidadaoPec AS fciCidadaoPec,    
-            fact.nuCns AS cns_cidadao,
-            fact.cpf AS cpf_cidadao,
-            tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-            tds.ds_sexo AS sexo,
-            fact.dtNascimento AS dt_nascimento,
-            tdfe.ds_faixa_etaria AS idade,
-            fact.noNomeMae AS no_mome_mae
+            p_equipe varchar default null)
+        returns table(has_clinico integer)
+        language plpgsql
+        as $$
+        begin
+            return query
+            SELECT count(*)::integer
         FROM (
-            SELECT
-                tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                tb_fat_cad_individual.nu_cns AS nuCns,
-                tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                cad_individual.no_mae_cidadao AS noNomeMae,
-                tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                tb_fat_cad_individual.co_dim_sexo AS sexo,
-                tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-            FROM
-                tb_fat_cad_individual
-            JOIN tb_dim_tipo_saida_cadastro 
-                ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-            JOIN tb_cds_cad_individual cad_individual 
-                ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-            WHERE
-                tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                --AND (tb_fat_cad_individual.st_hipertensao_arterial = 1 or tb_fat_cad_individual.st_hipertensao_arterial is null)  -- Mantém a condição para hipertensos e não hipertensos
-                AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                AND EXISTS (
-                    SELECT 1
-                    FROM tb_fat_cidadao
-                    WHERE 
-                        tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                        AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                )
-                AND EXISTS (
-                    SELECT 1
-                    FROM tb_fat_atendimento_individual tfai 
-                    WHERE 
-                        tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                        AND (
-                            tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                            OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                            OR tfai.ds_filtro_cids IN (
-                                '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
-                            )
-                        )
-                ) 
-                AND tb_dim_tipo_saida_cadastro.nu_identificador = '-' --and tb_fat_cidadao_pec.st_faleceu = 0
-        ) AS fact
-        LEFT JOIN tb_fat_cidadao_pec 
-            ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-        JOIN tb_dim_equipe tde 
-                ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
-        JOIN tb_dim_sexo tds 
-            ON tds.co_seq_dim_sexo = fact.sexo
-        JOIN tb_dim_faixa_etaria tdfe 
-            ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-        WHERE 
-        (tde.nu_ine = p_equipe or p_equipe IS NULL) and  tb_fat_cidadao_pec.st_faleceu = 0
-        GROUP BY 
-            fact.fciCidadaoPec, 
-            fact.nuCns, 
-            fact.cpf, 
-            tb_fat_cidadao_pec.no_cidadao, 
-            tds.ds_sexo, 
-            fact.dtNascimento, 
-            tdfe.ds_faixa_etaria, 
-            fact.noNomeMae
-        --having count(fact.fciCidadaoPec) = 1
-    ) AS total;
-    --group by total.sexo;
-    end;
-    $$`
-    },
-
-    {
-        name: 'HAS Autorreferidos',
-        definition: `CREATE OR REPLACE FUNCTION has_autorreferidos(
-        p_equipe VARCHAR DEFAULT NULL
-    )
-    RETURNS TABLE (has_autorrefidos INTEGER)
-    LANGUAGE plpgsql
-    AS $$
-    BEGIN
-        RETURN QUERY
-        SELECT COUNT(*)::integer
-        FROM (
-            SELECT DISTINCT
-                tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
+            SELECT distinct            
                 fact.nuCns AS cns_cidadao,
-                fact.cpf AS cpf_cidadao,
-                fact.noNomeMae AS no_mome_mae,
-                fact.dtNascimento AS dt_nascimento,
-                tds.ds_sexo AS sexo,
-                tdfe.ds_faixa_etaria AS idade
+                fact.cpf AS cpf_cidadao
             FROM (
                 SELECT
                     tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
@@ -1621,9 +1514,9 @@ const functions = [
                 JOIN tb_cds_cad_individual cad_individual 
                     ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
                 WHERE
-                    tb_fat_cad_individual.co_dim_cbo in(395, 468, 945, 8892) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                    AND tb_fat_cad_individual.st_hipertensao_arterial = 1
-                    AND tb_fat_cad_individual.st_ficha_inativa = 0
+                    tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
+                    --AND (tb_fat_cad_individual.st_hipertensao_arterial = 1 or tb_fat_cad_individual.st_hipertensao_arterial is null)  -- Mantém a condição para hipertensos e não hipertensos
+                    AND tb_fat_cad_individual.st_ficha_inativa = 0 
                     AND EXISTS (
                         SELECT 1
                         FROM tb_fat_cidadao
@@ -1632,7 +1525,7 @@ const functions = [
                             AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
                             AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
                     )
-                    AND NOT EXISTS (
+                    AND EXISTS (
                         SELECT 1
                         FROM tb_fat_atendimento_individual tfai 
                         WHERE 
@@ -1646,340 +1539,396 @@ const functions = [
                                     '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
                                 )
                             )
-                    )
-                    AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                    ) 
+                    AND tb_dim_tipo_saida_cadastro.nu_identificador = '-' --and tb_fat_cidadao_pec.st_faleceu = 0
             ) AS fact
             LEFT JOIN tb_fat_cidadao_pec 
                 ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
             JOIN tb_dim_equipe tde 
-                ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-            JOIN tb_dim_sexo tds 
-                ON tds.co_seq_dim_sexo = fact.sexo
-            JOIN tb_dim_faixa_etaria tdfe 
-                ON tdfe.co_seq_dim_faixa_etaria = fact.idade
+                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc
             WHERE 
-                (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-        ) AS autorreferidos;
-    END;
-    $$;`
+            (tde.nu_ine = p_equipe or p_equipe IS NULL) and  tb_fat_cidadao_pec.st_faleceu = 0
+            GROUP BY          
+                fact.nuCns, 
+                fact.cpf    
+        ) AS total;
+        end;
+        $$`
+    },
+
+    {
+        name: 'HAS Autorreferidos',
+        definition: `CREATE OR REPLACE FUNCTION has_autorreferidos(
+            p_equipe VARCHAR DEFAULT NULL
+        )
+        RETURNS TABLE (has_autorrefidos INTEGER)
+        LANGUAGE plpgsql
+        AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT COUNT(*)::integer
+            FROM (
+                SELECT DISTINCT            
+                    fact.nuCns AS cns_cidadao,
+                    fact.cpf AS cpf_cidadao
+                FROM (
+                    SELECT
+                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                        tb_fat_cad_individual.nu_cns AS nuCns,
+                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                        --cad_individual.no_mae_cidadao AS noNomeMae,
+                        --tb_fat_cad_individual.dt_nascimento AS dtNascimento,
+                        --tb_fat_cad_individual.co_dim_sexo AS sexo,
+                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                    FROM
+                        tb_fat_cad_individual
+                    JOIN tb_dim_tipo_saida_cadastro 
+                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                    JOIN tb_cds_cad_individual cad_individual 
+                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                    WHERE
+                        tb_fat_cad_individual.co_dim_cbo in(395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
+                        AND tb_fat_cad_individual.st_hipertensao_arterial = 1
+                        AND tb_fat_cad_individual.st_ficha_inativa = 0
+                        AND EXISTS (
+                            SELECT 1
+                            FROM tb_fat_cidadao
+                            WHERE 
+                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                        )
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM tb_fat_atendimento_individual tfai 
+                            WHERE 
+                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                AND (
+                                    tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
+                                    OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
+                                    OR tfai.ds_filtro_cids IN (
+                                        '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
+                                        '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
+                                        '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                                    )
+                                )
+                        )
+                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                ) AS fact
+                LEFT JOIN tb_fat_cidadao_pec 
+                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                JOIN tb_dim_equipe tde 
+                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc
+                WHERE 
+                    (p_equipe IS NULL OR tde.nu_ine = p_equipe)
+                GROUP BY          
+                    fact.nuCns, 
+                    fact.cpf    
+            ) AS autorreferidos;
+        END;
+        $$;
+`
     },
 
     {
         name: 'HAS Sexo',
         definition: `create or replace function has_sexo(
-        p_equipe varchar default null)
-    returns table(sexo varchar, total bigint)
-    language plpgsql
-    as $$
-    begin
-        return query
-            SELECT 
-            COALESCE(t1.sexo, t2.sexo) AS sexo,
-            COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0)::integer AS total_sexo
-        FROM (
-            -- Query 1
-            SELECT 
-                teste.sexo, 
-                COUNT(*) AS count_sexo
+            p_equipe varchar default null)
+        returns table(sexo varchar, total bigint)
+        language plpgsql
+        as $$
+        begin
+            return query
+                SELECT 
+                COALESCE(t1.sexo, t2.sexo) AS sexo,
+                COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0)::integer AS total_sexo
             FROM (
-                SELECT DISTINCT
-                    tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao,
-                    fact.noNomeMae AS no_mome_mae,
-                    fact.dtNascimento AS dt_nascimento,
-                    tds.ds_sexo AS sexo,
-                    tdfe.ds_faixa_etaria AS idade
+                -- Query 1
+                SELECT 
+                    teste.sexo, 
+                    COUNT(*) AS count_sexo
                 FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                        AND tb_fat_cad_individual.st_hipertensao_arterial = 1
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                    OR tfai.ds_filtro_cids IN (
-                                        '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                        '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                        '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                    SELECT DISTINCT	            
+                        fact.nuCns AS cns_cidadao,
+                        fact.cpf AS cpf_cidadao,
+                        tds.ds_sexo AS sexo	            
+                    FROM (
+                        SELECT
+                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                            tb_fat_cad_individual.nu_cns AS nuCns,
+                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                            cad_individual.no_mae_cidadao AS noNomeMae,
+                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
+                            tb_fat_cad_individual.co_dim_sexo AS sexo,
+                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                        FROM
+                            tb_fat_cad_individual
+                        JOIN tb_dim_tipo_saida_cadastro 
+                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                        JOIN tb_cds_cad_individual cad_individual 
+                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                        WHERE
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
+                            AND tb_fat_cad_individual.st_hipertensao_arterial = 1
+                            AND tb_fat_cad_individual.st_ficha_inativa = 0
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_cidadao
+                                WHERE 
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                            )
+                            AND NOT EXISTS (
+                                SELECT 1
+                                FROM tb_fat_atendimento_individual tfai 
+                                WHERE 
+                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                    AND (
+                                        tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
+                                        OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
+                                        OR tfai.ds_filtro_cids IN (
+                                            '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
+                                            '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
+                                            '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                                        )
                                     )
-                                )
-                        )
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-                JOIN tb_dim_sexo tds 
-                    ON tds.co_seq_dim_sexo = fact.sexo
-                JOIN tb_dim_faixa_etaria tdfe 
-                    ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-            ) AS teste
-            GROUP BY teste.sexo
-        ) AS t1
-        FULL JOIN (
-            -- Query 2
-            SELECT 
-                teste2.sexo, 
-                COUNT(*) AS count_sexo
-            FROM (
-                SELECT DISTINCT
-                    fact.fciCidadaoPec AS fciCidadaoPec,    
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao,
-                    tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                    tds.ds_sexo AS sexo,
-                    fact.dtNascimento AS dt_nascimento,
-                    tdfe.ds_faixa_etaria AS idade,
-                    fact.noNomeMae AS no_mome_mae
+                            )
+                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                    ) AS fact
+                    LEFT JOIN tb_fat_cidadao_pec 
+                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                    JOIN tb_dim_equipe tde 
+                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
+                    JOIN tb_dim_sexo tds 
+                        ON tds.co_seq_dim_sexo = fact.sexo
+                    JOIN tb_dim_faixa_etaria tdfe 
+                        ON tdfe.co_seq_dim_faixa_etaria = fact.idade
+                    WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
+                    group by fact.nucns, fact.cpf, tds.ds_sexo
+                ) AS teste
+                GROUP BY teste.sexo
+            ) AS t1
+            FULL JOIN (
+                -- Query 2
+                SELECT 
+                    teste2.sexo, 
+                    COUNT(*) AS count_sexo
                 FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                    OR tfai.ds_filtro_cids IN (
-                                        '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                        '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                        '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                    SELECT DISTINCT   
+                        fact.nuCns AS cns_cidadao,
+                        fact.cpf AS cpf_cidadao,           
+                        tds.ds_sexo AS sexo	           
+                    FROM (
+                        SELECT
+                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                            tb_fat_cad_individual.nu_cns AS nuCns,
+                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                            cad_individual.no_mae_cidadao AS noNomeMae,
+                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
+                            tb_fat_cad_individual.co_dim_sexo AS sexo,
+                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                        FROM
+                            tb_fat_cad_individual
+                        JOIN tb_dim_tipo_saida_cadastro 
+                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                        JOIN tb_cds_cad_individual cad_individual 
+                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                        WHERE
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
+                            AND tb_fat_cad_individual.st_ficha_inativa = 0 
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_cidadao
+                                WHERE 
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                            )
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_atendimento_individual tfai 
+                                WHERE 
+                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                    AND (
+                                        tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
+                                        OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
+                                        OR tfai.ds_filtro_cids IN (
+                                            '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
+                                            '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
+                                            '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                                        )
                                     )
-                                )
-                        ) 
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
-                JOIN tb_dim_sexo tds 
-                    ON tds.co_seq_dim_sexo = fact.sexo
-                JOIN tb_dim_faixa_etaria tdfe 
-                    ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-            ) AS teste2
-            GROUP BY teste2.sexo
-        ) AS t2
-        ON t1.sexo = t2.sexo;
-    end;
-    $$`
+                            ) 
+                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                    ) AS fact
+                    LEFT JOIN tb_fat_cidadao_pec 
+                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                    JOIN tb_dim_equipe tde 
+                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
+                    JOIN tb_dim_sexo tds 
+                        ON tds.co_seq_dim_sexo = fact.sexo	
+                    WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
+                    group by fact.nucns, fact.cpf, tds.ds_sexo				
+                ) AS teste2
+                GROUP BY teste2.sexo
+            ) AS t2
+            ON t1.sexo = t2.sexo;
+        end;
+        $$`
     },
 
     {
         name: 'HAS Faita Etaria',
         definition: `create or replace function has_fx_etaria(
-        p_equipe varchar default null)
-    returns table (faixa_etaria varchar, total bigint)
-    language plpgsql
-    as $$
-    begin
-        return query
-            SELECT 
-            COALESCE(t1.idade, t2.idade) AS fx_etaria,
-            COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0) AS total_fx_etaria
-        FROM (
-            -- Query 1
-            SELECT 
-                teste.idade, 
-                COUNT(*) AS count_sexo
+            p_equipe varchar default null)
+        returns table (faixa_etaria varchar, total bigint)
+        language plpgsql
+        as $$
+        begin
+            return query
+                SELECT 
+                COALESCE(t1.idade, t2.idade) AS fx_etaria,
+                COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0) AS total_fx_etaria
             FROM (
-                SELECT DISTINCT
-                    tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao,
-                    fact.noNomeMae AS no_mome_mae,
-                    fact.dtNascimento AS dt_nascimento,
-                    tds.ds_sexo AS sexo,
-                    tdfe.ds_faixa_etaria AS idade
+                -- Query 1
+                SELECT 
+                    teste.idade, 
+                    COUNT(*) AS count_sexo
                 FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                        AND tb_fat_cad_individual.st_hipertensao_arterial = 1
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                    OR tfai.ds_filtro_cids IN (
-                                        '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                        '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                        '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                    SELECT DISTINCT
+                        tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
+                        fact.nuCns AS cns_cidadao,
+                        fact.cpf AS cpf_cidadao,
+                        tdfe.ds_faixa_etaria AS idade
+                    FROM (
+                        SELECT
+                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                            tb_fat_cad_individual.nu_cns AS nuCns,
+                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                            cad_individual.no_mae_cidadao AS noNomeMae,
+                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
+                            tb_fat_cad_individual.co_dim_sexo AS sexo,
+                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                        FROM
+                            tb_fat_cad_individual
+                        JOIN tb_dim_tipo_saida_cadastro 
+                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                        JOIN tb_cds_cad_individual cad_individual 
+                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                        WHERE
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
+                            AND tb_fat_cad_individual.st_hipertensao_arterial = 1
+                            AND tb_fat_cad_individual.st_ficha_inativa = 0
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_cidadao
+                                WHERE 
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                            )
+                            AND NOT EXISTS (
+                                SELECT 1
+                                FROM tb_fat_atendimento_individual tfai 
+                                WHERE 
+                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                    AND (
+                                        tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
+                                        OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
+                                        OR tfai.ds_filtro_cids IN (
+                                            '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
+                                            '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
+                                            '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                                        )
                                     )
-                                )
-                        )
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-                JOIN tb_dim_sexo tds 
-                    ON tds.co_seq_dim_sexo = fact.sexo
-                JOIN tb_dim_faixa_etaria tdfe 
-                    ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
-            ) AS teste
-            GROUP BY teste.idade
-        ) AS t1
-        FULL JOIN (
-            -- Query 2
-            SELECT 
-                teste2.idade, 
-                COUNT(*) AS count_sexo
-            FROM (
-                SELECT DISTINCT
-                    fact.fciCidadaoPec AS fciCidadaoPec,    
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao,
-                    tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                    tds.ds_sexo AS sexo,
-                    fact.dtNascimento AS dt_nascimento,
-                    tdfe.ds_faixa_etaria AS idade,
-                    fact.noNomeMae AS no_mome_mae
+                            )
+                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                    ) AS fact
+                    LEFT JOIN tb_fat_cidadao_pec 
+                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                    JOIN tb_dim_equipe tde 
+                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
+                    JOIN tb_dim_sexo tds 
+                        ON tds.co_seq_dim_sexo = fact.sexo
+                    JOIN tb_dim_faixa_etaria tdfe 
+                        ON tdfe.co_seq_dim_faixa_etaria = fact.idade
+                    WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
+                ) AS teste
+                GROUP BY teste.idade
+            ) AS t1
+            FULL JOIN (
+                -- Query 2
+                SELECT 
+                    teste2.idade, 
+                    COUNT(*) AS count_sexo
                 FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                    OR tfai.ds_filtro_cids IN (
-                                        '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                        '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                        '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                    SELECT DISTINCT
+                        fact.fciCidadaoPec AS fciCidadaoPec,    
+                        fact.nuCns AS cns_cidadao,
+                        fact.cpf AS cpf_cidadao,
+                        tdfe.ds_faixa_etaria AS idade	            
+                    FROM (
+                        SELECT
+                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                            tb_fat_cad_individual.nu_cns AS nuCns,
+                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                            cad_individual.no_mae_cidadao AS noNomeMae,
+                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
+                            tb_fat_cad_individual.co_dim_sexo AS sexo,
+                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                        FROM
+                            tb_fat_cad_individual
+                        JOIN tb_dim_tipo_saida_cadastro 
+                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                        JOIN tb_cds_cad_individual cad_individual 
+                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                        WHERE
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
+                            AND tb_fat_cad_individual.st_ficha_inativa = 0 
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_cidadao
+                                WHERE 
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                            )
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_atendimento_individual tfai 
+                                WHERE 
+                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                    AND (
+                                        tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
+                                        OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
+                                        OR tfai.ds_filtro_cids IN (
+                                            '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
+                                            '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
+                                            '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
+                                        )
                                     )
-                                )
-                        ) 
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
-                JOIN tb_dim_sexo tds 
-                    ON tds.co_seq_dim_sexo = fact.sexo
-                JOIN tb_dim_faixa_etaria tdfe 
-                    ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
-            ) AS teste2
-            GROUP BY teste2.idade
-        ) AS t2
-        ON t1.idade= t2.idade;	
-    end;
-    $$`
+                            ) 
+                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                    ) AS fact
+                    LEFT JOIN tb_fat_cidadao_pec 
+                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                    JOIN tb_dim_equipe tde 
+                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc	
+                    JOIN tb_dim_faixa_etaria tdfe 
+                        ON tdfe.co_seq_dim_faixa_etaria = fact.idade
+                    WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
+                ) AS teste2
+                GROUP BY teste2.idade
+            ) AS t2
+            ON t1.idade= t2.idade;	
+        end;
+        $$`
     },
 
     {
@@ -2045,205 +1994,19 @@ const functions = [
     $$;`
     },
 
-    {
-        name: 'Diabeticos Clinicos',
+    {   name: 'Diabeticos Clinicos',
         definition: `create or replace function diabeticos_clinico(
-        p_equipe varchar default null)
-    returns table(diabetico_clinico integer)
-    language plpgsql
-    as $$
-    begin
-        return query
-        SELECT count(*)::integer
-    FROM (
-        SELECT distinct
-            fact.fciCidadaoPec AS fciCidadaoPec,    
-            fact.nuCns AS cns_cidadao,
-            fact.cpf AS cpf_cidadao,
-            tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-            tds.ds_sexo AS sexo,
-            fact.dtNascimento AS dt_nascimento,
-            tdfe.ds_faixa_etaria AS idade,
-            fact.noNomeMae AS no_mome_mae
-        FROM (
-            SELECT
-                tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                tb_fat_cad_individual.nu_cns AS nuCns,
-                tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                cad_individual.no_mae_cidadao AS noNomeMae,
-                tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                tb_fat_cad_individual.co_dim_sexo AS sexo,
-                tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-            FROM
-                tb_fat_cad_individual
-            JOIN tb_dim_tipo_saida_cadastro 
-                ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-            JOIN tb_cds_cad_individual cad_individual 
-                ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-            WHERE
-                tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892)
-                --AND (tb_fat_cad_individual.st_hipertensao_arterial = 1 or tb_fat_cad_individual.st_hipertensao_arterial is null)  -- Mantém a condição para hipertensos e não hipertensos
-                AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                AND EXISTS (
-                    SELECT 1
-                    FROM tb_fat_cidadao
-                    WHERE 
-                        tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                        AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                )
-                AND EXISTS (
-                    SELECT 1
-                    FROM tb_fat_atendimento_individual tfai 
-                    WHERE 
-                        tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                        AND (
-                            tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                            OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                                    OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                            '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                            '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                            '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                            '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                            '|O242|','|O243|', '|P702|')
-                        )
-                ) 
-                AND tb_dim_tipo_saida_cadastro.nu_identificador = '-' --and tb_fat_cidadao_pec.st_faleceu = 0
-        ) AS fact
-        LEFT JOIN tb_fat_cidadao_pec 
-            ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-        JOIN tb_dim_equipe tde 
-                ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
-        JOIN tb_dim_sexo tds 
-            ON tds.co_seq_dim_sexo = fact.sexo
-        JOIN tb_dim_faixa_etaria tdfe 
-            ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-        WHERE 
-        (tde.nu_ine = p_equipe or p_equipe IS NULL) and  tb_fat_cidadao_pec.st_faleceu = 0
-        GROUP BY 
-            fact.fciCidadaoPec, 
-            fact.nuCns, 
-            fact.cpf, 
-            tb_fat_cidadao_pec.no_cidadao, 
-            tds.ds_sexo, 
-            fact.dtNascimento, 
-            tdfe.ds_faixa_etaria, 
-            fact.noNomeMae
-        --having count(fact.fciCidadaoPec) = 1
-    ) AS total;
-    --group by total.sexo;
-    end;
-    $$`
-    },
-
-    {
-        name: 'Diabeticos Autorreferidos',
-        definition: `CREATE OR REPLACE FUNCTION diabeticos_autorreferidos(
-        p_equipe VARCHAR DEFAULT NULL
-    )
-    RETURNS TABLE (diabetico_autorrefidos INTEGER)
-    LANGUAGE plpgsql
-    AS $$
-    BEGIN
-        RETURN QUERY
-        SELECT COUNT(*)::integer
-        FROM (
-            SELECT DISTINCT
-                tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                fact.nuCns AS cns_cidadao,
-                fact.cpf AS cpf_cidadao,
-                fact.noNomeMae AS no_mome_mae,
-                fact.dtNascimento AS dt_nascimento,
-                tds.ds_sexo AS sexo,
-                tdfe.ds_faixa_etaria AS idade
+                p_equipe varchar default null)
+            returns table(diabetico_clinico integer)
+            language plpgsql
+            as $$
+            begin
+                return query
+                SELECT count(*)::integer
             FROM (
-                SELECT
-                    tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                    tb_fat_cad_individual.nu_cns AS nuCns,
-                    tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                    tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                    cad_individual.no_mae_cidadao AS noNomeMae,
-                    tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                    tb_fat_cad_individual.co_dim_sexo AS sexo,
-                    tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                FROM
-                    tb_fat_cad_individual
-                JOIN tb_dim_tipo_saida_cadastro 
-                    ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                JOIN tb_cds_cad_individual cad_individual 
-                    ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                WHERE
-                    tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892)
-                    AND tb_fat_cad_individual.st_diabete = 1
-                    AND tb_fat_cad_individual.st_ficha_inativa = 0
-                    AND EXISTS (
-                        SELECT 1
-                        FROM tb_fat_cidadao
-                        WHERE 
-                            tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                            AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                    )
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM tb_fat_atendimento_individual tfai 
-                        WHERE 
-                            tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                            AND (
-                                tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                            OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                            OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                            '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                            '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                            '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                            '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                            '|O242|','|O243|', '|P702|')
-                            )
-                    )
-                    AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-            ) AS fact
-            LEFT JOIN tb_fat_cidadao_pec 
-                ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-            JOIN tb_dim_equipe tde 
-                ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-            JOIN tb_dim_sexo tds 
-                ON tds.co_seq_dim_sexo = fact.sexo
-            JOIN tb_dim_faixa_etaria tdfe 
-                ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-            WHERE 
-                (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-        ) AS autorreferidos;
-    END;
-    $$;`
-    },
-
-    {
-        name: 'Diabeticos Faixa Etaria',
-        definition: `create or replace function diabeticos_fx_etaria(
-        p_equipe varchar default null)
-    returns table (faixa_etaria varchar, total bigint)
-    language plpgsql
-    as $$
-    begin
-        return query
-            SELECT 
-            COALESCE(t1.idade, t2.idade) AS fx_etaria,
-            COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0) AS total_fx_etaria
-        FROM (
-            -- Query 1
-            SELECT 
-                teste.idade, 
-                COUNT(*) AS count_sexo
-            FROM (
-                SELECT DISTINCT
-                    tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
+                SELECT distinct            
                     fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao,
-                    fact.noNomeMae AS no_mome_mae,
-                    fact.dtNascimento AS dt_nascimento,
-                    tds.ds_sexo AS sexo,
-                    tdfe.ds_faixa_etaria AS idade
+                    fact.cpf AS cpf_cidadao
                 FROM (
                     SELECT
                         tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
@@ -2251,9 +2014,7 @@ const functions = [
                         tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
                         tb_fat_cad_individual.co_dim_profissional AS coDimProf,
                         cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                        tb_fat_cad_individual.dt_nascimento AS dtNascimento    
                     FROM
                         tb_fat_cad_individual
                     JOIN tb_dim_tipo_saida_cadastro 
@@ -2261,81 +2022,8 @@ const functions = [
                     JOIN tb_cds_cad_individual cad_individual 
                         ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
                     WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892)
-                        AND tb_fat_cad_individual.st_diabete = 1
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                            OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                            OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                            '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                            '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                            '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                            '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                            '|O242|','|O243|', '|P702|'
-                                    )
-                                )
-                        )
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-                JOIN tb_dim_sexo tds 
-                    ON tds.co_seq_dim_sexo = fact.sexo
-                JOIN tb_dim_faixa_etaria tdfe 
-                    ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
-            ) AS teste
-            GROUP BY teste.idade
-        ) AS t1
-        FULL JOIN (
-            -- Query 2
-            SELECT 
-                teste2.idade, 
-                COUNT(*) AS count_sexo
-            FROM (
-                SELECT DISTINCT
-                    fact.fciCidadaoPec AS fciCidadaoPec,    
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao,
-                    tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                    tds.ds_sexo AS sexo,
-                    fact.dtNascimento AS dt_nascimento,
-                    tdfe.ds_faixa_etaria AS idade,
-                    fact.noNomeMae AS no_mome_mae
-                FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892)
+                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
+                        --AND (tb_fat_cad_individual.st_hipertensao_arterial = 1 or tb_fat_cad_individual.st_hipertensao_arterial is null)  -- Mantém a condição para hipertensos e não hipertensos
                         AND tb_fat_cad_individual.st_ficha_inativa = 0 
                         AND EXISTS (
                             SELECT 1
@@ -2350,198 +2038,401 @@ const functions = [
                             FROM tb_fat_atendimento_individual tfai 
                             WHERE 
                                 tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (	                             
+                                AND (
                                     tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                            OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                            OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                            '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                            '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                            '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                            '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                            '|O242|','|O243|', '|P702|'
-                                    )
+                                    OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
+                                            OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
+                                    '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
+                                    '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
+                                    '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
+                                    '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
+                                    '|O242|','|O243|', '|P702|')
                                 )
                         ) 
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-' --and tb_fat_cidadao_pec.st_faleceu = 0
                 ) AS fact
                 LEFT JOIN tb_fat_cidadao_pec 
                     ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
                 JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
-                JOIN tb_dim_sexo tds 
-                    ON tds.co_seq_dim_sexo = fact.sexo
-                JOIN tb_dim_faixa_etaria tdfe 
-                    ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
-            ) AS teste2
-            GROUP BY teste2.idade
-        ) AS t2
-        ON t1.idade= t2.idade;	
-    end;
-    $$`
+                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc
+                WHERE 
+                (tde.nu_ine = p_equipe or p_equipe IS NULL) and  tb_fat_cidadao_pec.st_faleceu = 0
+                GROUP BY  
+                    fact.nuCns, 
+                    fact.cpf 
+
+            ) AS total;
+            end;
+            $$`
+    },
+
+    {   name: 'Diabeticos Autorreferidos',
+        definition: `CREATE OR REPLACE FUNCTION diabeticos_autorreferidos(
+                p_equipe VARCHAR DEFAULT NULL
+            )
+            RETURNS TABLE (diabetico_autorrefidos INTEGER)
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT COUNT(*)::integer
+                FROM (
+                    SELECT DISTINCT
+                        fact.nuCns AS cns_cidadao,
+                        fact.cpf AS cpf_cidadao
+                    FROM (
+                        SELECT
+                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                            tb_fat_cad_individual.nu_cns AS nuCns,
+                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                            cad_individual.no_mae_cidadao AS noNomeMae,
+                            tb_fat_cad_individual.dt_nascimento AS dtNascimento
+                        FROM
+                            tb_fat_cad_individual
+                        JOIN tb_dim_tipo_saida_cadastro 
+                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                        JOIN tb_cds_cad_individual cad_individual 
+                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                        WHERE
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
+                            AND tb_fat_cad_individual.st_diabete = 1
+                            AND tb_fat_cad_individual.st_ficha_inativa = 0
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_cidadao
+                                WHERE 
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                            )
+                            AND NOT EXISTS (
+                                SELECT 1
+                                FROM tb_fat_atendimento_individual tfai 
+                                WHERE 
+                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                    AND (
+                                        tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
+                                    OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
+                                    OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
+                                    '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
+                                    '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
+                                    '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
+                                    '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
+                                    '|O242|','|O243|', '|P702|')
+                                    )
+                            )
+                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                    ) AS fact
+                    LEFT JOIN tb_fat_cidadao_pec 
+                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                    JOIN tb_dim_equipe tde 
+                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
+                    WHERE 
+                        (p_equipe IS NULL OR tde.nu_ine = p_equipe)
+                    GROUP BY  
+                        fact.nuCns, 
+                        fact.cpf
+                ) AS autorreferidos;
+            END;
+            $$;`
+    },
+
+    {   name: 'Diabeticos Faixa Etaria',
+        definition: `create or replace function diabeticos_fx_etaria(
+                p_equipe varchar default null)
+            returns table (faixa_etaria varchar, total bigint)
+            language plpgsql
+            as $$
+            begin
+                return query
+                    SELECT 
+                    COALESCE(t1.idade, t2.idade) AS fx_etaria,
+                    COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0) AS total_fx_etaria
+                FROM (
+                    -- Query 1
+                    SELECT 
+                        teste.idade, 
+                        COUNT(*) AS count_sexo
+                    FROM (
+                        SELECT DISTINCT	            
+                            fact.nuCns AS cns_cidadao,
+                            fact.cpf AS cpf_cidadao,	            
+                            tdfe.ds_faixa_etaria AS idade
+                        FROM (
+                            SELECT
+                                tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                                tb_fat_cad_individual.nu_cns AS nuCns,
+                                tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                                tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                                cad_individual.no_mae_cidadao AS noNomeMae,
+                                tb_fat_cad_individual.dt_nascimento AS dtNascimento,
+                                tb_fat_cad_individual.co_dim_sexo AS sexo,
+                                tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                            FROM
+                                tb_fat_cad_individual
+                            JOIN tb_dim_tipo_saida_cadastro 
+                                ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                            JOIN tb_cds_cad_individual cad_individual 
+                                ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                            WHERE
+                                tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
+                                AND tb_fat_cad_individual.st_diabete = 1
+                                AND tb_fat_cad_individual.st_ficha_inativa = 0
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM tb_fat_cidadao
+                                    WHERE 
+                                        tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                        AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                        AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                )
+                                AND NOT EXISTS (
+                                    SELECT 1
+                                    FROM tb_fat_atendimento_individual tfai 
+                                    WHERE 
+                                        tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                        AND (
+                                            tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
+                                    OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
+                                    OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
+                                    '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
+                                    '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
+                                    '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
+                                    '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
+                                    '|O242|','|O243|', '|P702|'
+                                            )
+                                        )
+                                )
+                                AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                        ) AS fact
+                        LEFT JOIN tb_fat_cidadao_pec 
+                            ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                        JOIN tb_dim_equipe tde 
+                            ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc
+                        JOIN tb_dim_faixa_etaria tdfe 
+                            ON tdfe.co_seq_dim_faixa_etaria = fact.idade
+                        WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
+                    ) AS teste
+                    GROUP BY teste.idade
+                ) AS t1
+                FULL JOIN (
+                    -- Query 2
+                    SELECT 
+                        teste2.idade, 
+                        COUNT(*) AS count_sexo
+                    FROM (
+                        SELECT DISTINCT	                
+                            fact.nuCns AS cns_cidadao,
+                            fact.cpf AS cpf_cidadao,
+                            tdfe.ds_faixa_etaria AS idade	            
+                        FROM (
+                            SELECT
+                                tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                                tb_fat_cad_individual.nu_cns AS nuCns,
+                                tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                                tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                                cad_individual.no_mae_cidadao AS noNomeMae,
+                                tb_fat_cad_individual.dt_nascimento AS dtNascimento,
+                                tb_fat_cad_individual.co_dim_sexo AS sexo,
+                                tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                            FROM
+                                tb_fat_cad_individual
+                            JOIN tb_dim_tipo_saida_cadastro 
+                                ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                            JOIN tb_cds_cad_individual cad_individual 
+                                ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                            WHERE
+                                tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
+                                AND tb_fat_cad_individual.st_ficha_inativa = 0 
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM tb_fat_cidadao
+                                    WHERE 
+                                        tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                        AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                        AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                )
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM tb_fat_atendimento_individual tfai 
+                                    WHERE 
+                                        tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                        AND (	                             
+                                            tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
+                                    OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
+                                    OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
+                                    '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
+                                    '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
+                                    '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
+                                    '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
+                                    '|O242|','|O243|', '|P702|'
+                                            )
+                                        )
+                                ) 
+                                AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                        ) AS fact
+                        LEFT JOIN tb_fat_cidadao_pec 
+                            ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                        JOIN tb_dim_equipe tde 
+                            ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc	 
+                        JOIN tb_dim_faixa_etaria tdfe 
+                            ON tdfe.co_seq_dim_faixa_etaria = fact.idade
+                        WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
+                    ) AS teste2
+                    GROUP BY teste2.idade
+                ) AS t2
+                ON t1.idade= t2.idade;	
+            end;
+            $$`
     },
 
     {
         name: 'Diabeticos Sexo',
         definition: `create or replace function diabeticos_sexo(
-        p_equipe varchar default null)
-    returns table(sexo varchar, total bigint)
-    language plpgsql
-    as $$
-    begin
-        return query
-            SELECT 
-            COALESCE(t1.sexo, t2.sexo) AS sexo,
-            COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0)::integer AS total_sexo
-        FROM (
-            -- Query 1
-            SELECT 
-                teste.sexo, 
-                COUNT(*) AS count_sexo
+            p_equipe varchar default null)
+        returns table(sexo varchar, total bigint)
+        language plpgsql
+        as $$
+        begin
+            return query
+                SELECT 
+                COALESCE(t1.sexo, t2.sexo) AS sexo,
+                COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0)::integer AS total_sexo
             FROM (
-                SELECT DISTINCT
-                    tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao,
-                    fact.noNomeMae AS no_mome_mae,
-                    fact.dtNascimento AS dt_nascimento,
-                    tds.ds_sexo AS sexo,
-                    tdfe.ds_faixa_etaria AS idade
+                -- Query 1
+                SELECT 
+                    teste.sexo, 
+                    COUNT(*) AS count_sexo
                 FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892)
-                        AND tb_fat_cad_individual.st_diabete = 1
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                            OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                            OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                            '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                            '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                            '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                            '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                            '|O242|','|O243|', '|P702|'
+                    SELECT DISTINCT
+                        fact.nuCns AS cns_cidadao,
+                        fact.cpf AS cpf_cidadao,	            
+                        tds.ds_sexo AS sexo	            
+                    FROM (
+                        SELECT
+                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                            tb_fat_cad_individual.nu_cns AS nuCns,
+                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
+                            cad_individual.no_mae_cidadao AS noNomeMae,
+                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
+                            tb_fat_cad_individual.co_dim_sexo AS sexo,
+                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
+                        FROM
+                            tb_fat_cad_individual
+                        JOIN tb_dim_tipo_saida_cadastro 
+                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                        JOIN tb_cds_cad_individual cad_individual 
+                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                        WHERE
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
+                            AND tb_fat_cad_individual.st_diabete = 1
+                            AND tb_fat_cad_individual.st_ficha_inativa = 0
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_cidadao
+                                WHERE 
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                            )
+                            AND NOT EXISTS (
+                                SELECT 1
+                                FROM tb_fat_atendimento_individual tfai 
+                                WHERE 
+                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                    AND (
+                                        tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
+                                OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
+                                OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
+                                '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
+                                '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
+                                '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
+                                '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
+                                '|O242|','|O243|', '|P702|'
+                                        )
                                     )
-                                )
-                        )
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-                JOIN tb_dim_sexo tds 
-                    ON tds.co_seq_dim_sexo = fact.sexo
-                JOIN tb_dim_faixa_etaria tdfe 
-                    ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-            ) AS teste
-            GROUP BY teste.sexo
-        ) AS t1
-        FULL JOIN (
-            -- Query 2
-            SELECT 
-                teste2.sexo, 
-                COUNT(*) AS count_sexo
-            FROM (
-                SELECT DISTINCT
-                    fact.fciCidadaoPec AS fciCidadaoPec,    
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao,
-                    tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                    tds.ds_sexo AS sexo,
-                    fact.dtNascimento AS dt_nascimento,
-                    tdfe.ds_faixa_etaria AS idade,
-                    fact.noNomeMae AS no_mome_mae
+                            )
+                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                    ) AS fact
+                    LEFT JOIN tb_fat_cidadao_pec 
+                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                    JOIN tb_dim_equipe tde 
+                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
+                    JOIN tb_dim_sexo tds 
+                        ON tds.co_seq_dim_sexo = fact.sexo
+                    JOIN tb_dim_faixa_etaria tdfe 
+                        ON tdfe.co_seq_dim_faixa_etaria = fact.idade
+                    WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
+                ) AS teste
+                GROUP BY teste.sexo
+            ) AS t1
+            FULL JOIN (
+                -- Query 2
+                SELECT 
+                    teste2.sexo, 
+                    COUNT(*) AS count_sexo
                 FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945, 8892)
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                            OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                            OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                            '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                            '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                            '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                            '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                            '|O242|','|O243|', '|P702|'
+                    SELECT DISTINCT	                
+                        fact.nuCns AS cns_cidadao,
+                        fact.cpf AS cpf_cidadao,	            
+                        tds.ds_sexo AS sexo
+                    FROM (
+                        SELECT
+                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
+                            tb_fat_cad_individual.nu_cns AS nuCns,
+                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
+                            tb_fat_cad_individual.co_dim_sexo AS sexo
+                        FROM
+                            tb_fat_cad_individual
+                        JOIN tb_dim_tipo_saida_cadastro 
+                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
+                        JOIN tb_cds_cad_individual cad_individual 
+                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
+                        WHERE
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
+                            AND tb_fat_cad_individual.st_ficha_inativa = 0 
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_cidadao
+                                WHERE 
+                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
+                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
+                            )
+                            AND EXISTS (
+                                SELECT 1
+                                FROM tb_fat_atendimento_individual tfai 
+                                WHERE 
+                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
+                                    AND (
+                                        tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
+                                OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
+                                OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
+                                '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
+                                '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
+                                '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
+                                '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
+                                '|O242|','|O243|', '|P702|'
+                                        )
                                     )
-                                )
-                        ) 
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
-                JOIN tb_dim_sexo tds 
-                    ON tds.co_seq_dim_sexo = fact.sexo
-                JOIN tb_dim_faixa_etaria tdfe 
-                    ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-            ) AS teste2
-            GROUP BY teste2.sexo
-        ) AS t2
-        ON t1.sexo = t2.sexo;
-    end;
-    $$`
+                            ) 
+                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
+                    ) AS fact
+                    LEFT JOIN tb_fat_cidadao_pec 
+                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
+                    JOIN tb_dim_equipe tde 
+                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
+                    JOIN tb_dim_sexo tds 
+                        ON tds.co_seq_dim_sexo = fact.sexo
+                    WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
+                ) AS teste2
+                GROUP BY teste2.sexo
+            ) AS t2
+            ON t1.sexo = t2.sexo;
+        end;
+        $$`
     },
 
     /*-------------------------------------------------------*/
