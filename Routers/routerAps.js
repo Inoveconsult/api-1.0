@@ -113,9 +113,14 @@ atencaobasica.get('/geolocalizacao_domiciliar', async (req, res) => {
 
 atencaobasica.get('/calcular_iaf', async (req, res) => {
   let { cnes, mes, ano } = req.query;
-  if (!cnes) {
-    cnes = null;
-  }
+    // Converter cnes para array, caso seja string separada por vírgulas
+    if (cnes && typeof cnes === 'string') {
+      cnes = cnes.split(','); // Converte "2458519,2458489" em ["2458519", "2458489"]
+    }
+    if (!Array.isArray(cnes)) {
+      cnes = []; // Caso cnes não seja enviado ou seja inválido, inicializa como array vazio
+    }
+    
   if (!mes) {
     mes = null;
   }
@@ -130,6 +135,16 @@ atencaobasica.get('/calcular_pse', async(req, res) => {
   const result = await new apsRepository().calcularPse();
   res.status(200).send(result);
 })
+
+atencaobasica.get('/resumo_pbf', async (req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  const result = await new apsRepository().resumoPbf(equipe);
+  res.status(200).send(result);
+})
+
 //HIPERTENSOS
 
 atencaobasica.get('/has_clinico', async (req, res) => {

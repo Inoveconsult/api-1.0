@@ -1323,7 +1323,7 @@ const functions = [
     {
         name: 'Calcular IAF',
         definition: `CREATE OR REPLACE FUNCTION calcular_iaf(
-            param_cnes VARCHAR DEFAULT NULL,
+            param_cnes text [] DEFAULT NULL,
             param_mes INTEGER DEFAULT NULL,
             param_ano INTEGER DEFAULT NULL
         )
@@ -1345,7 +1345,7 @@ const functions = [
             INNER JOIN
                 tb_dim_unidade_saude tdus ON tdus.co_seq_dim_unidade_saude = tfac.co_dim_unidade_saude
             WHERE
-                (param_cnes IS NULL OR tdus.nu_cnes = param_cnes) AND
+                (param_cnes IS NULL OR tdus.nu_cnes = any(param_cnes)) AND
                 (param_mes IS NULL OR EXTRACT(MONTH FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_mes) AND
                 (param_ano IS NULL OR EXTRACT(YEAR FROM to_date(tfac.co_dim_tempo::text, 'YYYYMMDD')) = param_ano) AND
                 --AGE(CURRENT_DATE, TO_DATE(tfac.co_dim_tempo::TEXT, 'YYYYMMDD')) <= INTERVAL '1 year' AND
@@ -1372,48 +1372,18 @@ const functions = [
         as $$
         begin
             RETURN QUERY
-                WITH CTE_ESCOLAS_REGISTRADAS AS( 
-                select count(*) as TOTAL_ESCOLAS from (
-                select ds_filtro_tema_para_saude, ds_filtro_pratica_em_saude, co_dim_inep, co_dim_tempo 
-                from (
-                SELECT 
-                    ds_filtro_tema_para_saude,
-                    ds_filtro_pratica_em_saude, 
-                    co_dim_inep, 
-                    co_dim_tempo,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY co_dim_inep
-                        ORDER BY co_dim_inep ASC
-                    ) AS rn
-                FROM 
-                    tb_fat_atividade_coletiva tfac
-                WHERE 
-                    (
-                    ds_filtro_tema_para_saude LIKE '%|1|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|5|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|7|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|13|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|14|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|15|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|16|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|17|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|19|%' OR 
-                    ds_filtro_tema_para_saude LIKE '%|29|%' OR
-                    ds_filtro_pratica_em_saude LIKE '%|2|%' OR 
-                    ds_filtro_pratica_em_saude LIKE '%|3|%' OR 
-                    ds_filtro_pratica_em_saude LIKE '%|9|%' OR 
-                    ds_filtro_pratica_em_saude LIKE '%|11|%' OR 
-                    ds_filtro_pratica_em_saude LIKE '%|20|%' OR 
-                    ds_filtro_pratica_em_saude LIKE '%|22|%' OR 
-                    ds_filtro_pratica_em_saude LIKE '%|24|%' OR 
-                    ds_filtro_pratica_em_saude LIKE '%|30|%'
-                    )
-                    AND co_dim_tempo >= '20230101' 
-                    AND (co_dim_inep IS NOT null and co_dim_inep > 1)
-                    AND co_dim_inep IN (
-                        SELECT co_dim_inep 
-                        FROM tb_fat_atividade_coletiva
-                        WHERE 
+                WITH CTE_ESCOLAS_REGISTRADAS AS (
+                    SELECT COUNT(*) AS TOTAL_ESCOLAS 
+                    FROM (
+                        SELECT ds_filtro_tema_para_saude, 
+                            ds_filtro_pratica_em_saude, 
+                            co_dim_inep, 
+                            co_dim_tempo,
+                            -- ti.ds_inep as inep,			
+                            ROW_NUMBER() OVER (PARTITION BY co_dim_inep ORDER BY co_dim_inep ASC) AS rn
+                        FROM tb_fat_atividade_coletiva tfac
+                        join tb_dim_inep tdi on tdi.co_seq_dim_inep =  tfac.co_dim_inep
+                        WHERE (
                             ds_filtro_tema_para_saude LIKE '%|1|%' OR 
                             ds_filtro_tema_para_saude LIKE '%|5|%' OR 
                             ds_filtro_tema_para_saude LIKE '%|7|%' OR 
@@ -1432,55 +1402,131 @@ const functions = [
                             ds_filtro_pratica_em_saude LIKE '%|22|%' OR 
                             ds_filtro_pratica_em_saude LIKE '%|24|%' OR 
                             ds_filtro_pratica_em_saude LIKE '%|30|%'
-                    ) 
-                ) as escolasregistradapse where rn = 1 order by escolasregistradapse.co_dim_inep asc) as atingidaspse
-            ), CTE_ACOES_REGISTRADAS as (
-                select COUNT(*) as ACOES_ESCOLAS from (
-                SELECT 
-                    ds_filtro_tema_para_saude,
-                    ds_filtro_pratica_em_saude, 
-                    co_dim_inep, 
-                    co_dim_tempo,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY co_dim_inep
-                        ORDER BY co_dim_inep ASC
-                    ) AS rn
-                FROM 
-                    tb_fat_atividade_coletiva tfac
-                WHERE 
-                    (   
-                        (ds_filtro_tema_para_saude LIKE '%|1|%' OR
-                        ds_filtro_pratica_em_saude LIKE '%|11|%' OR
-                        ds_filtro_pratica_em_saude LIKE '%|20|%') OR
-                        ds_filtro_tema_para_saude LIKE '%|5|%' OR 
-                        ds_filtro_tema_para_saude LIKE '%|13|%' OR 
-                        ds_filtro_tema_para_saude LIKE '%|16|%' OR 
-                        ds_filtro_tema_para_saude LIKE '%|17|%' 	        
-                    )
-                    AND co_dim_tempo >= '20230101' 
-                    AND (co_dim_inep IS NOT null and co_dim_inep > 1)
-                    AND co_dim_inep IN (
-                        SELECT co_dim_inep 
-                        FROM tb_fat_atividade_coletiva
-                        WHERE	                
-                        (ds_filtro_tema_para_saude LIKE '%|1|%' OR
-                        ds_filtro_pratica_em_saude LIKE '%|11|%' AND 
-                        ds_filtro_pratica_em_saude LIKE '%|20|%') OR
-                        ds_filtro_tema_para_saude LIKE '%|5|%' OR 
-                        ds_filtro_tema_para_saude LIKE '%|13|%' OR 
-                        ds_filtro_tema_para_saude LIKE '%|16|%' OR 
-                        ds_filtro_tema_para_saude LIKE '%|17|%' 	        
                         ) 
-                ) as ACOESPSE where rn = 1
-            )
-            SELECT 
-                CTE_ESCOLAS_REGISTRADAS.TOTAL_ESCOLAS::INTEGER,
-                CTE_ACOES_REGISTRADAS.ACOES_ESCOLAS::INTEGER
-            FROM 
-                CTE_ESCOLAS_REGISTRADAS,
-                CTE_ACOES_REGISTRADAS;	
+                        AND co_dim_tempo >= '20230101' 
+                        AND co_dim_inep IS NOT NULL 
+                        AND co_dim_inep > 1
+                    ) AS escolasregistradapse
+                    WHERE rn = 1
+                ), 
+                CTE_ACOES_REGISTRADAS AS (
+                    SELECT COUNT(*) AS ACOES_ESCOLAS 
+                    FROM (
+                        SELECT ds_filtro_tema_para_saude, 
+                            ds_filtro_pratica_em_saude, 
+                            co_dim_inep, 
+                            co_dim_tempo,
+                            ROW_NUMBER() OVER (PARTITION BY co_dim_inep ORDER BY co_dim_inep ASC) AS rn
+                        FROM tb_fat_atividade_coletiva tfac
+                        join tb_dim_inep tdi on tdi.co_seq_dim_inep =  tfac.co_dim_inep
+                        WHERE (
+                            ds_filtro_tema_para_saude LIKE '%|1|%' OR
+                            (ds_filtro_pratica_em_saude LIKE '%|11|%' OR
+                            ds_filtro_pratica_em_saude LIKE '%|20|%') OR
+                            ds_filtro_tema_para_saude LIKE '%|5|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|13|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|16|%' OR 
+                            ds_filtro_tema_para_saude LIKE '%|17|%'
+                        )				
+                        AND co_dim_tempo >= '20230101' 
+                        AND co_dim_inep IS NOT NULL 
+                        AND co_dim_inep > 1
+                    ) AS ACOESPSE
+                    WHERE rn = 1
+                )
+                SELECT 
+                    CTE_ESCOLAS_REGISTRADAS.TOTAL_ESCOLAS::integer,
+                    CTE_ACOES_REGISTRADAS.ACOES_ESCOLAS::integer
+                FROM 
+                    CTE_ESCOLAS_REGISTRADAS, 
+                    CTE_ACOES_REGISTRADAS;	
         end;
         $$`
+    },
+
+    {name:'Resumo Bolsa Familia',
+        definition:`CREATE OR replace FUNCTION RESUMO_PBF(
+        P_EQUIPE VARCHAR DEFAULT NULL,
+        P_VIGENCIA VARCHAR DEFAULT NULL)
+        RETURNS TABLE (TOTAL_PBF INTEGER,RECONHECIDOS_ESUS INTEGER,
+        NAO_RECONHECIDO_ESUS INTEGER, CPF_RECONHECIDO INTEGER, 
+                        CNS_RECONHECIDO INTEGER)
+    LANGUAGE PLPGSQL
+    AS $$
+    BEGIN
+        RETURN QUERY
+    WITH CTE_Cidadao AS (
+        SELECT 
+            no_cidadao,
+            nu_documento,
+            tp_documento
+        FROM 
+            tb_cidadao_bolsa_familia
+        WHERE 
+        tp_documento IN ('CPF', 'CNS', 'NIS') -- Filtrar no início
+    ),
+    CTE_Agregado AS (
+        SELECT 
+            no_cidadao,
+            MAX(CASE WHEN tp_documento = 'CPF' THEN nu_documento END) AS cpf,
+            MAX(CASE WHEN tp_documento = 'CNS' THEN nu_documento END) AS cns,
+            MAX(CASE WHEN tp_documento = 'NIS' THEN nu_documento END) AS nis
+        FROM 
+            CTE_Cidadao
+        GROUP BY 
+            no_cidadao
+    ),
+    CTE_Localizados AS (
+        SELECT distinct
+            ca.no_cidadao,
+            ca.cpf,
+            ca.cns,
+            ca.nis,
+            --tde.nu_ine,
+            CASE 
+                WHEN CA.CPF = tfcp.nu_cpf_cidadao OR CA.CNS = tfcp.nu_cns THEN 'SIM'
+                ELSE 'NÃO'
+            END AS localizados,
+            CASE 
+                WHEN tfcp.nu_cpf_cidadao = ca.cpf THEN 'SIM'
+                ELSE 'NÃO'
+            END AS cpf_identificado,
+            CASE 
+                WHEN tfcp.nu_cns = ca.cns THEN 'SIM'
+            ELSE 'NÃO'
+            END AS cns_identificado
+        FROM 
+            CTE_Agregado ca
+        LEFT JOIN 
+            tb_fat_cidadao_pec tfcp 
+            ON (tfcp.nu_cpf_cidadao = ca.cpf AND ca.cpf IS NOT NULL)
+            OR (tfcp.nu_cns = ca.cns AND ca.cns IS NOT NULL)
+        LEFT JOIN 
+            tb_dim_equipe tde 
+            ON tde.co_seq_dim_equipe = tfcp.co_dim_equipe_vinc
+        where
+            p_equipe is null or tde.nu_ine = p_equipe
+    ),
+    CTE_Totalizados AS (
+        SELECT 
+            COUNT(*) AS total,
+            SUM(CASE WHEN localizados = 'SIM' THEN 1 ELSE 0 END) AS total_localizados,
+            SUM(CASE WHEN localizados = 'NÃO' THEN 1 ELSE 0 END) AS total_nao_localizados,
+            SUM(CASE WHEN cpf_identificado = 'SIM' THEN 1 ELSE 0 END) AS total_cpf_localizado,
+            SUM(CASE WHEN cns_identificado = 'SIM' THEN 1 ELSE 0 END) AS total_cns_localizado
+        FROM 
+            CTE_Localizados
+    )
+    SELECT 
+        total::integer,
+        total_localizados::integer,
+        total_nao_localizados::integer,
+        total_cpf_localizado::integer,
+        total_cns_localizado::integer
+    FROM 
+        CTE_Totalizados;
+    END;
+    $$`
     },
     /*-----------------HIPERTENSOS---------------------------*/
     {
@@ -2653,38 +2699,39 @@ const functions = [
     {
         name: 'Listar ESB',
         definition: `create or replace function listar_esb()
-    returns table (ine varchar, nomeequipe varchar)
-    language plpgsql
-    as $$
-    begin
-        return query
-        select 
-        nu_ine,
-        no_equipe
-        from tb_dim_equipe tde 
-        where tde.no_equipe like ('ESB%') and st_registro_valido = 1
-        order by no_equipe;
-    end;
-    $$`
+            returns table (ine varchar, nomeequipe varchar)
+            language plpgsql
+            as $$
+            begin
+                return query
+                select 
+                    nu_ine,
+                    no_equipe
+                from tb_equipe
+                left join tb_tipo_equipe on tp_equipe = co_seq_tipo_equipe 
+                where st_ativo = 1 and nu_ms = '71' 
+                order by no_equipe;
+            end;
+            $$`
     },
 
     {
         name: 'Lista ESF',
         definition: `create or replace function listar_esf()
-    returns table (ine varchar, nomeequipe varchar)
-    language plpgsql
-    as $$
-    begin
-        return query
-        select 
-        nu_ine,
-        no_equipe
-        from tb_dim_equipe tde 
-        where tde.no_equipe not like ('ESB%') and 
-        st_registro_valido = 1
-        order by no_equipe;
-    end;
-    $$`
+            returns table (ine varchar, nomeequipe varchar)
+            language plpgsql
+            as $$
+            begin
+                return query
+                select 
+                    nu_ine,
+                    no_equipe
+                from tb_equipe
+                left join tb_tipo_equipe on tp_equipe = co_seq_tipo_equipe
+                where st_ativo = 1 and nu_ms = '70' 
+                order by no_equipe;
+            end;
+            $$`
     },
 
     {

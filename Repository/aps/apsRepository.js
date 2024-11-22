@@ -86,7 +86,7 @@ class apsRepository extends baseRopository{
 
     async calcularIaf(p1, p2, p3) {
       try {
-        const result = await super.getAll('calcular_iaf', p1, p2, p3);
+        const result = await super.getCalcularIAF('calcular_iaf', p1, p2, p3);
         return result;
       } catch (error) {
         throw error;
@@ -97,6 +97,15 @@ class apsRepository extends baseRopository{
       try {
         const result = await super.getSemParametro('calcula_pse');
         return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async resumoPbf(p1) {
+      try {
+        const result = await super.getBolsaFamilia('resumo_pbf', p1)
+        return result
       } catch (error) {
         throw error;
       }

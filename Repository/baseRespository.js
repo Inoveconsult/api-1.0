@@ -64,6 +64,15 @@ class baseRopository {
     }
   }
 
+async getCalcularIAF(funcao, p1, p2, p3) {
+  try {
+    const result = (await pool.query(`SELECT * FROM ${funcao}($1::text[], $2, $3)`, [p1, p2, p3])).rows;
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}
+
   async getParametroEquipe(funcao, p1){
     try{
       const result = (await pool.query(`SELECT * FROM ${funcao}($1)`, [p1])).rows;
