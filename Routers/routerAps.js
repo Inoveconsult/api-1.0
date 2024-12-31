@@ -144,7 +144,15 @@ atencaobasica.get('/resumo_pbf', async (req, res) => {
   const result = await new apsRepository().resumoPbf(equipe);
   res.status(200).send(result);
 })
+atencaobasica.get('/total_duplicados', async(req, res) => {
+  const result = await new apsRepository().totalDuplicados();
+  res.status(200).send(result);
+})
 
+atencaobasica.get('/lista_duplicados', async(req, res) => {
+  const result = await new apsRepository().listaDuplicados();
+  res.status(200).send(result);
+})
 //HIPERTENSOS
 
 atencaobasica.get('/has_clinico', async (req, res) => {

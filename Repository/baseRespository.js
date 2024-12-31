@@ -90,6 +90,24 @@ async getCalcularIAF(funcao, p1, p2, p3) {
       throw error;
     }
   }
+  // /CADASTROS DUPLICADOS/ 
+  async getTotalDuplicados(funcao){
+    try {
+      const result = (await pool.query(`SELECT DISTINCT DUPLICADOS FROM ${funcao}()`)).rows;
+      return result;
+    } catch (error) {
+      throw error;      
+    }
+  }
+  // LISTA CADASTROS DUPLICADOS 
+  async getListarDuplicados(funcao){
+    try {
+      const result = (await pool.query(`SELECT CPF, CNS, NOME_CIDADAO, DT_NASC, NOME_MAE, ULTIMA_ATUALIZACAO, NOME_EQUIPE FROM ${funcao}()`)).rows;
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
 
 };
 

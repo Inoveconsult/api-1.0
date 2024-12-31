@@ -526,7 +526,7 @@ const functions = [
                 and tdp.co_proced not like '%03010600%' 
                 and tdp.co_proced not like '%01010201%'
                 and tdp.co_proced not like '%ABPG042%' 
-                AND (tfaop.co_dim_cbo_1 in (439, 440, 460, 461,960, 1165, 8908))
+                AND (tfaop.co_dim_cbo_1 in (439, 440, 460, 461, 661, 960, 1165, 8908))
                 AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
                 AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfaop.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_mes)
                 AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfaop.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_ano)  
@@ -612,7 +612,7 @@ const functions = [
             inner join tb_dim_profissional tdp on tdp.co_seq_dim_profissional = tfao.co_dim_profissional_1
             inner join tb_dim_equipe tde on tde.co_seq_dim_equipe = tfao.co_dim_equipe_1
             where tdp.st_registro_valido = 1 
-            and tfao.co_dim_cbo_1 in (439, 461, 960, 8908)
+            and tfao.co_dim_cbo_1 in (439, 461, 661, 960, 8908)
             and tfao.co_dim_tempo >= '20240101'
             AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = v_mes)
             AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = v_ano)
@@ -731,7 +731,7 @@ const functions = [
                             join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro = tb_fat_cad_individual.co_dim_tipo_saida_cadastro
                             join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
                         where
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
+                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 575, 945)
                             and exists (
                                 select
                                     1
@@ -814,7 +814,7 @@ const functions = [
                         join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
                         join tb_dim_equipe tde on tde.co_seq_dim_equipe = tb_fat_cad_individual.co_dim_equipe
                     where
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
+                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 575, 945) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
                         and exists (
                                     select
                                         1
@@ -902,7 +902,7 @@ const functions = [
                     join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
                     join tb_dim_equipe tde on tde.co_seq_dim_equipe = tb_fat_cad_individual.co_dim_equipe
                 where			
-                    tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
+                    tb_fat_cad_individual.co_dim_cbo in (395, 468, 575, 945) --or  tb_fat_cad_individual.co_dim_cbo = 945 or tb_fat_cad_individual.co_dim_cbo = 395
                     and exists (
                                 select
                                     1
@@ -1118,9 +1118,9 @@ const functions = [
             inner join tb_dim_equipe tde on tde.co_seq_dim_equipe = tfai.co_dim_equipe_1
             where
                 CASE
-                    WHEN p_profissional = '999' THEN tfai.co_dim_cbo_1 not in(391, 392, 458, 465, 943, 944, 8890, 8891)
-                    WHEN p_profissional in ('238', '391', '458', '943', '8890') THEN tfai.co_dim_cbo_1 in (238, 391, 458, 943, 8890)
-                    WHEN p_profissional in ('239', '392', '465', '944', '8891') THEN tfai.co_dim_cbo_1 in (239, 392, 465, 944, 8891)
+                    WHEN p_profissional = '999' THEN tfai.co_dim_cbo_1 not in(391, 392, 458, 465, 573, 574, 943, 944, 8890, 8891)
+                    WHEN p_profissional in ('238', '391', '458','574', '943', '8890') THEN tfai.co_dim_cbo_1 in (238, 391, 458, 574, 943, 8890)
+                    WHEN p_profissional in ('239', '392', '465','573', '944', '8891') THEN tfai.co_dim_cbo_1 in (239, 392, 465, 573, 944, 8891)
                     ELSE p_profissional is null
                 END
             AND tdp.st_registro_valido = 1 
@@ -1242,7 +1242,7 @@ const functions = [
         AND tcd.tp_cds_imovel = 1   
         AND (tfcd.co_dim_tempo_validade > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer	
         AND tfcd.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer)
-        AND tfcd.co_dim_cbo in (395, 468, 945, 8892)	
+        AND tfcd.co_dim_cbo in (395, 468, 575, 945, 8892)	
         AND (p_profissional is null or tdp.nu_cns = p_profissional)
         AND (p_equipe is null or tde.nu_ine = p_equipe)
         
@@ -1260,7 +1260,7 @@ const functions = [
         AND tcd.tp_cds_imovel = 1   
         AND (tfcd.co_dim_tempo_validade > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer	
         AND tfcd.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer)
-        AND tfcd.co_dim_cbo IN (395, 468, 945)
+        AND tfcd.co_dim_cbo IN (395, 468, 575, 945)
         AND (p_profissional IS NULL OR tdp.nu_cns = p_profissional)
         AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
     )
@@ -1527,6 +1527,126 @@ const functions = [
         CTE_Totalizados;
     END;
     $$`
+    },
+
+    {name:'Listagem Duplicados',
+        definition: `CREATE OR REPLACE FUNCTION LISTAR_DUPLICADOS() 
+        RETURNS TABLE (
+            DUPLICADOS INTEGER,    
+            CPF VARCHAR,
+            CNS VARCHAR,
+            NOME_CIDADAO VARCHAR,
+            DT_NASC TEXT,
+            NOME_MAE VARCHAR,
+            ULTIMA_ATUALIZACAO TEXT,    
+            NOME_EQUIPE VARCHAR
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+        WITH TOTAL_DUPLICADOS AS (
+                SELECT 
+                    COUNT(*)/2 AS TOTAL  
+                FROM TB_FAT_CIDADAO_PEC TFCP
+                LEFT JOIN TB_CIDADAO TC ON
+                    TC.CO_SEQ_CIDADAO = TFCP.CO_CIDADAO
+                LEFT JOIN TB_DIM_EQUIPE TDE ON
+                    TFCP.CO_DIM_EQUIPE_VINC = TDE.CO_SEQ_DIM_EQUIPE 
+                WHERE 
+                    TC.ST_UNIFICADO = 0
+                    AND (
+                        (TFCP.NO_CIDADAO, TFCP.CO_DIM_TEMPO_NASCIMENTO, TC.NO_MAE) IN (
+                            SELECT 
+                                TFCP_INNER.NO_CIDADAO, 
+                                TFCP_INNER.CO_DIM_TEMPO_NASCIMENTO, 
+                                TC_INNER.NO_MAE
+                            FROM TB_FAT_CIDADAO_PEC TFCP_INNER
+                            LEFT JOIN TB_CIDADAO TC_INNER ON
+                                TC_INNER.CO_SEQ_CIDADAO = TFCP_INNER.CO_CIDADAO
+                            GROUP BY 
+                                TFCP_INNER.NO_CIDADAO, 
+                                TFCP_INNER.CO_DIM_TEMPO_NASCIMENTO, 
+                                TC_INNER.NO_MAE
+                            HAVING COUNT(*) > 1
+                        ) 
+                        OR 
+                        (TFCP.NO_CIDADAO, TFCP.CO_DIM_TEMPO_NASCIMENTO) IN (
+                            SELECT 
+                                TFCP_INNER.NO_CIDADAO, 
+                                TFCP_INNER.CO_DIM_TEMPO_NASCIMENTO
+                            FROM TB_FAT_CIDADAO_PEC TFCP_INNER
+                            LEFT JOIN TB_CIDADAO TC_INNER ON
+                                TC_INNER.CO_SEQ_CIDADAO = TFCP_INNER.CO_CIDADAO
+                            GROUP BY 
+                                TFCP_INNER.NO_CIDADAO, 
+                                TFCP_INNER.CO_DIM_TEMPO_NASCIMENTO
+                            HAVING COUNT(*) > 1
+                        )
+                    )
+            ),
+            LISTA_DUPLICADOS AS (
+            SELECT 
+                TFCP.NU_CNS AS CNS,
+                TFCP.NU_CPF_CIDADAO AS CPF, 
+                TFCP.NO_CIDADAO AS NOME_CIDADAO, 
+                TO_CHAR(TO_DATE(TFCP.CO_DIM_TEMPO_NASCIMENTO::TEXT,'YYYYMMDD'), 'DD/MM/YYYY') AS DT_NASCIMENTO,
+                TC.NO_MAE AS NOME_MAE, 
+                TO_CHAR(CAST(TC.DT_ATUALIZADO AS DATE),'DD/MM/YYYY') AS ULTIMA_ATUALIZACAO, 
+                TDE.NO_EQUIPE AS NOME_EQUIPE     
+            FROM TB_FAT_CIDADAO_PEC TFCP
+            LEFT JOIN TB_CIDADAO TC ON
+                TC.CO_SEQ_CIDADAO = TFCP.CO_CIDADAO
+            LEFT JOIN TB_DIM_EQUIPE TDE ON
+                TFCP.CO_DIM_EQUIPE_VINC = TDE.CO_SEQ_DIM_EQUIPE 
+            WHERE 
+                TC.ST_UNIFICADO = 0
+                AND (
+                    (TFCP.NO_CIDADAO, TFCP.CO_DIM_TEMPO_NASCIMENTO, TC.NO_MAE) IN (
+                        SELECT 
+                            TFCP_INNER.NO_CIDADAO, 
+                            TFCP_INNER.CO_DIM_TEMPO_NASCIMENTO, 
+                            TC_INNER.NO_MAE
+                        FROM TB_FAT_CIDADAO_PEC TFCP_INNER
+                        LEFT JOIN TB_CIDADAO TC_INNER ON
+                            TC_INNER.CO_SEQ_CIDADAO = TFCP_INNER.CO_CIDADAO
+                        GROUP BY 
+                            TFCP_INNER.NO_CIDADAO, 
+                            TFCP_INNER.CO_DIM_TEMPO_NASCIMENTO, 
+                            TC_INNER.NO_MAE
+                        HAVING COUNT(*) > 1
+                    ) 
+                    OR 
+                    (TFCP.NO_CIDADAO, TFCP.CO_DIM_TEMPO_NASCIMENTO) IN (
+                        SELECT 
+                            TFCP_INNER.NO_CIDADAO, 
+                            TFCP_INNER.CO_DIM_TEMPO_NASCIMENTO
+                        FROM TB_FAT_CIDADAO_PEC TFCP_INNER
+                        LEFT JOIN TB_CIDADAO TC_INNER ON
+                            TC_INNER.CO_SEQ_CIDADAO = TFCP_INNER.CO_CIDADAO
+                        GROUP BY 
+                            TFCP_INNER.NO_CIDADAO, 
+                            TFCP_INNER.CO_DIM_TEMPO_NASCIMENTO
+                        HAVING COUNT(*) > 1
+                    )
+                )
+            ORDER BY TFCP.NO_CIDADAO
+            )
+            SELECT
+                TD.TOTAL::INTEGER,
+                LD.CNS,
+                LD.CPF,
+                LD.NOME_CIDADAO,
+                LD.DT_NASCIMENTO,
+                LD.NOME_MAE,
+                LD.ULTIMA_ATUALIZACAO,
+                CASE WHEN
+                    LD.NOME_EQUIPE ISNULL THEN 'SEM VINCULO'
+                    ELSE LD.NOME_EQUIPE
+                END AS NOME_EQUIPE
+            FROM TOTAL_DUPLICADOS TD
+            CROSS JOIN LISTA_DUPLICADOS LD;
+        END;
+        $$ LANGUAGE PLPGSQL;`
+
     },
     /*-----------------HIPERTENSOS---------------------------*/
     {

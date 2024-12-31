@@ -110,6 +110,26 @@ class apsRepository extends baseRopository{
         throw error;
       }
     }
+    
+    // CADASTROS DUPLICADOS
+    async totalDuplicados(){
+      try {
+        const result = await super.getTotalDuplicados('listar_duplicados');
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async listaDuplicados(){
+      try {
+        const result = await super.getListarDuplicados('listar_duplicados');
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
 
 
     //HIPERTENSOS
