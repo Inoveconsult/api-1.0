@@ -144,9 +144,25 @@ atencaobasica.get('/resumo_pbf', async (req, res) => {
   const result = await new apsRepository().resumoPbf(equipe);
   res.status(200).send(result);
 })
+
 atencaobasica.get('/total_duplicados', async(req, res) => {
   const result = await new apsRepository().totalDuplicados();
   res.status(200).send(result);
+})
+
+atencaobasica.get('/dimensao_cadastro', async (req, res) => {
+  let {data, equipe, populacao} = req.query
+   // Verifique se todos os parâmetros estão definidos
+   if (!data || !equipe || !populacao) {
+    res.status(400).send({ error: 'Parâmetros data, equipe e populacao são obrigatórios.' });
+    return;
+  }
+  try {
+    const result = await new apsRepository().dimensaoCadastro(data, equipe, populacao)
+    res.status(200).send(result);    
+  } catch (error) {
+    res.status(500).send({ error: 'Erro interno do servidor.' });    
+  }  
 })
 
 atencaobasica.get('/lista_duplicados', async(req, res) => {
@@ -162,6 +178,7 @@ atencaobasica.get('/has_clinico', async (req, res) => {
   }
   const result = await new apsRepository().hasClinico(equipe);
   res.status(200).send(result);
+
 })
 
 atencaobasica.get('/has_autorreferido', async (req, res) => {

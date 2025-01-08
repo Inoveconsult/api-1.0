@@ -772,6 +772,54 @@ const functions = [
     },
 
     {
+        name: 'Dimensao Cadastro',
+        definition: `CREATE OR REPLACE FUNCTION dim_cadastro(data_referencia DATE, numero_ine text, p_populacao integer) 
+                RETURNS TABLE (
+                    total_mici INTEGER,
+                    total_mici_micdt INTEGER,
+                    total_micdt_desatualizada INTEGER,
+                    resultado FLOAT
+                ) AS $$
+                BEGIN
+                    RETURN QUERY
+                    WITH CTE_MICI AS (
+                        SELECT COUNT(*) AS total_mici
+                        FROM tb_acomp_cidadaos_vinculados tacv 
+                            WHERE st_possui_fci = 1 
+                            AND tacv.st_possui_fcdt = 0
+                            AND AGE(data_referencia, dt_ultima_atualizacao_cidadao) <= INTERVAL '24 months'
+                            AND nu_ine_vinc_equipe = numero_ine
+                    ),
+                    CTE_MICI_MICDT AS (
+                        SELECT COUNT(*) AS total_mici_micdt
+                        FROM tb_acomp_cidadaos_vinculados tacv 
+                            WHERE st_possui_fci = 1 
+                            AND tacv.st_possui_fcdt = 1
+                            AND AGE(data_referencia, dt_atualizacao_fcd) <= INTERVAL '24 months'
+                            AND nu_ine_vinc_equipe = numero_ine        
+                    ),
+                    CTE_MICDT_DESATUALIZADA AS (
+                        SELECT COUNT(*) AS total_micdt_desatualizada
+                        FROM tb_acomp_cidadaos_vinculados tacv 
+                            WHERE st_possui_fci = 1 
+                            AND tacv.st_possui_fcdt = 1
+                            AND AGE(data_referencia, dt_atualizacao_fcd) > INTERVAL '24 months'
+                            AND nu_ine_vinc_equipe = numero_ine        
+                    )
+                    SELECT 
+                        CTE_MICI.total_mici::INTEGER, 
+                        CTE_MICI_MICDT.total_mici_micdt::INTEGER, 
+                        CTE_MICDT_DESATUALIZADA.total_micdt_desatualizada::INTEGER,
+                        round(((((CTE_MICI.total_mici::INTEGER + CTE_MICDT_DESATUALIZADA.total_micdt_desatualizada::INTEGER) * 0.75) +
+                        (CTE_MICI_MICDT.total_mici_micdt * 1.5)*100)/p_populacao),2)::FLOAT AS resultado
+                    FROM CTE_MICI
+                    CROSS JOIN CTE_MICI_MICDT
+                    CROSS JOIN CTE_MICDT_DESATUALIZADA;
+                END;
+                $$ LANGUAGE plpgsql;`
+    },
+
+    {
         name: 'Criancas ate 5 anos',
         definition: `CREATE OR REPLACE FUNCTION crianca_ate_5_anos(
                 p_equipe varchar DEFAULT NULL,
@@ -1533,8 +1581,8 @@ const functions = [
         definition: `CREATE OR REPLACE FUNCTION LISTAR_DUPLICADOS() 
         RETURNS TABLE (
             DUPLICADOS INTEGER,    
-            CPF VARCHAR,
             CNS VARCHAR,
+            CPF VARCHAR,
             NOME_CIDADAO VARCHAR,
             DT_NASC TEXT,
             NOME_MAE VARCHAR,

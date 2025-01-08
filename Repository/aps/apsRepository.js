@@ -11,6 +11,15 @@ class apsRepository extends baseRopository{
     }
   }
 
+  async dimensaoCadastro(p1, p2, p3) {
+    try {
+      const result = await super.getDimensaoCadastro('dim_cadastro', p1, p2, p3);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async criancaCincoAnos(p1, p2){
     try {
       const result = await super.getVinculado('crianca_ate_5_anos', p1, p2);

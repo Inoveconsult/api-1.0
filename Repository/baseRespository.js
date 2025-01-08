@@ -109,6 +109,26 @@ async getCalcularIAF(funcao, p1, p2, p3) {
     }
   }
 
+  async getDimensaoCadastro(funcao, p1, p2, p3){
+    const result = (await pool.query(`
+        SELECT 
+            * ,
+            case 
+              when resultado >= 85 then '3.00' 
+              when resultado between 65 and 84.9 then '2.25'
+              when resultado between 45 and 64.9 then '1.50'
+              else '0.75'
+            end as score,
+            case 
+              when resultado >= 85 then 'OTIMO' 
+              when resultado between 65 and 84.9 then 'BOM'
+              when resultado between 45 and 64.9 then 'SUFICENTE'
+              else 'REGULAR'
+            end as classificacao
+          FROM ${funcao}($1, $2, $3)`,[p1, p2, p3])).rows;
+          return result;
+  }
+
 };
 
 
