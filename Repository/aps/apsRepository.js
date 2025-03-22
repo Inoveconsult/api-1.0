@@ -2,19 +2,20 @@ import baseRopository from "../baseRespository.js";
 
 class apsRepository extends baseRopository{  
   //INDICADORES DE VINCULO
-  async cidadaoVinculado(p1, p2){
+  async dimensaoVinculo(p1, p2) {
     try {
-      const result = await super.getVinculado('cidadao_vinculado', p1, p2);
+      const result = await super.getDimensaoVinculo('dim_vinculo', p1, p2);
       return result;
     } catch (error) {
-      throw error;      
+      throw error;
     }
   }
 
-  async dimensaoCadastro(p1, p2, p3) {
+  async rankingCadastro(p1, p2) {
     try {
-      const result = await super.getDimensaoCadastro('dim_cadastro', p1, p2, p3);
+      const result = await super.getRankingCadastro('dim_vinculo', p1, p2);
       return result;
+      console(result);
     } catch (error) {
       throw error;
     }
@@ -48,14 +49,6 @@ class apsRepository extends baseRopository{
     }
   }
 
-  async fciAtualizadas(p1, p2) {
-    try {
-      const result = await super.getVinculado('fci_atualizadas', p1, p2);
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  }
   // INDICADORES GERAIS ESF  
     async atendimentoDiarioAps(p1, p2, p3){
       try {

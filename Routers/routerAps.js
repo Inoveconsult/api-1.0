@@ -3,18 +3,6 @@ import apsRepository from "../Repository/aps/apsRepository.js";
 
 const atencaobasica = Router();
 
-atencaobasica.get('/cidadao_vinculado', async (req, res) => {
-  let { equipe, data } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  if (!data) {
-    data = null;
-  }
-  const result = await new apsRepository().cidadaoVinculado(equipe, data);
-  res.status(200).send(result);
-})
-
 atencaobasica.get('/crianca_ate_5_anos', async (req, res) => {
   let { equipe, data } = req.query;
   if (!equipe) {
@@ -45,18 +33,6 @@ atencaobasica.get('/bolsa_familia', async (req, res) => {
     equipe = null;
   }
   const result = await new apsRepository().bolsa_familia(equipe);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/fci_atualizadas', async (req, res) => {
-  let { equipe, data } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  if (!data) {
-    data = null;
-  }
-  const result = await new apsRepository().fciAtualizadas(equipe, data);
   res.status(200).send(result);
 })
 
@@ -150,25 +126,43 @@ atencaobasica.get('/total_duplicados', async(req, res) => {
   res.status(200).send(result);
 })
 
-atencaobasica.get('/dimensao_cadastro', async (req, res) => {
-  let {data, equipe, populacao} = req.query
+atencaobasica.get('/dimensao_vinculo', async (req, res) => {
+  let {quadrimestre, equipe} = req.query
    // Verifique se todos os parâmetros estão definidos
-   if (!data || !equipe || !populacao) {
-    res.status(400).send({ error: 'Parâmetros data, equipe e populacao são obrigatórios.' });
+   if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
     return;
   }
   try {
-    const result = await new apsRepository().dimensaoCadastro(data, equipe, populacao)
+    const result = await new apsRepository().dimensaoVinculo(quadrimestre, equipe)
     res.status(200).send(result);    
   } catch (error) {
     res.status(500).send({ error: 'Erro interno do servidor.' });    
   }  
 })
 
+atencaobasica.get('/ranking_cadastro', async (req, res) => {
+  let {quadrimestre, equipe} = req.query
+   // Verifique se todos os parâmetros estão definidos
+   if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre ou População.' });
+    return;
+  }
+  try {
+    const result = await new apsRepository().rankingCadastro(quadrimestre, equipe)
+    res.status(200).send(result);    
+   
+  } catch (error) {
+    res.status(500).send({ error: 'Erro interno do servidor.'});    
+  }  
+})
+
+
 atencaobasica.get('/lista_duplicados', async(req, res) => {
   const result = await new apsRepository().listaDuplicados();
   res.status(200).send(result);
 })
+
 //HIPERTENSOS
 
 atencaobasica.get('/has_clinico', async (req, res) => {

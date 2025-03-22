@@ -29,4 +29,9 @@ utilitarios.get('/listar_cnes', async(req, res) => {
   res.status(200).send(result);
 })
 
+utilitarios.get('/listar_inep', async(req, res) => {
+  const result = await new utilsRepository().listarInep();
+  res.status(200).send(result);
+})
+
 export default utilitarios;

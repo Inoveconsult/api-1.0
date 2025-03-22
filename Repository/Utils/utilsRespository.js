@@ -47,6 +47,14 @@ class utilsRepository extends baseRopository{
     }
   }
 
+  async listarInep() {
+    try {
+      const result = await super.getSemParametro('inep_escolas');
+        return result;
+    } catch (error) {
+      throw error;
+    }
+  }
 
 }
 

@@ -526,7 +526,7 @@ const functions = [
                 and tdp.co_proced not like '%03010600%' 
                 and tdp.co_proced not like '%01010201%'
                 and tdp.co_proced not like '%ABPG042%' 
-                AND (tfaop.co_dim_cbo_1 in (439, 440, 460, 461, 661, 960, 1165, 8908))
+                AND (tfaop.co_dim_cbo_1 in (125, 439, 440, 460, 461, 661, 960, 1165, 8908))
                 AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
                 AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfaop.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_mes)
                 AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfaop.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_ano)  
@@ -612,7 +612,7 @@ const functions = [
             inner join tb_dim_profissional tdp on tdp.co_seq_dim_profissional = tfao.co_dim_profissional_1
             inner join tb_dim_equipe tde on tde.co_seq_dim_equipe = tfao.co_dim_equipe_1
             where tdp.st_registro_valido = 1 
-            and tfao.co_dim_cbo_1 in (439, 461, 661, 960, 8908)
+            and tfao.co_dim_cbo_1 in (125, 439, 461, 661, 960, 8908)
             and tfao.co_dim_tempo >= '20240101'
             AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = v_mes)
             AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = v_ano)
@@ -655,8 +655,7 @@ const functions = [
             where tfao.co_dim_tempo >= 	'20240101'
                 AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
                 AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_mes)
-                AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_ano)		
-            --and tde.nu_ine = '0001984675'
+                AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_ano)		            
             group by
                 tde.nu_ine;
         end;
@@ -691,132 +690,158 @@ const functions = [
     },
 
     /*------------------INDICADORES DE VINCULO -----------*/
+    
     {
-        name: 'Cidadao Vinculado',
-        definition: `CREATE OR REPLACE FUNCTION cidadao_vinculado(
-            p_equipe varchar DEFAULT NULL,
-            p_data date DEFAULT NULL)
-        RETURNS TABLE(cidadao_vinculado integer)
-        LANGUAGE plpgsql
-        AS $$
-        declare
-            v_data varchar;
-        begin
-            -- Se p_data for fornecida, converte para o formato 'YYYYMMDD', caso contrário, usa a data atual
-            if p_data is not null then
-                v_data := to_char(p_data, 'YYYYMMDD');
-            else
-                v_data := to_char(CURRENT_DATE, 'YYYYMMDD');
-            end if;
-
-            return query
-            select count(*)::integer as cidadao_vinculado
-            from (
-                select
-                    fact.nuCns as cns_cidadao,
-                    fact.cpf as cpf_cidadao		
-                from
-                    (
-                        select
-                            tb_fat_cad_individual.co_dim_tipo_saida_cadastro as coDimTipoSaidaCadastro,
-                            tb_fat_cad_individual.co_dim_equipe as coDimEquipe,
-                            tb_fat_cad_individual.nu_cns as nuCns,
-                            tb_fat_cad_individual.nu_cpf_cidadao as cpf,
-                            tb_fat_cad_individual.co_fat_cidadao_pec as fciCidadaoPec,
-                            tb_fat_cad_individual.co_dim_profissional as coDimProf,
-                            cad_individual.no_mae_cidadao as noNomeMae,
-                            tb_fat_cad_individual.dt_nascimento as dtNascimento					
-                        from
-                            tb_fat_cad_individual tb_fat_cad_individual
-                            join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro = tb_fat_cad_individual.co_dim_tipo_saida_cadastro
-                            join tb_cds_cad_individual cad_individual on cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                        where
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 575, 945)
-                            and exists (
-                                select
-                                    1
-                                from
-                                    tb_fat_cidadao tb_fat_cidadao
-                                where
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    and tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > v_data::bigint
-                                    and tb_fat_cidadao.co_dim_tempo <= v_data::bigint
-                            )
-                            and tb_fat_cad_individual.st_ficha_inativa = 0
-                            and exists (
-                                select
-                                    1
-                                from
-                                    tb_fat_cidadao tb_fat_cidadao
-                                    join tb_fat_cidadao tbFatCidadaoRaizz on tb_fat_cidadao.co_fat_cidadao_raiz = tbFatCidadaoRaizz.co_fat_cidadao_raiz
-                                where
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    and tbFatCidadaoRaizz.co_dim_tempo_validade > v_data::bigint
-                                    and tbFatCidadaoRaizz.co_dim_tempo <= v_data::bigint
-                                    and tbFatCidadaoRaizz.st_vivo = 1
-                                    and tbFatCidadaoRaizz.st_mudou = 0
-                            )
-                            and tb_dim_tipo_saida_cadastro.nu_identificador = '-') as fact
-                left join tb_dim_tipo_saida_cadastro tb_dim_tipo_saida_cadastro on fact.coDimTipoSaidaCadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                join tb_fat_cidadao_pec tb_fat_cidadao_pec on fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                join tb_dim_profissional tb_dim_profissional on fact.coDimProf = tb_dim_profissional.co_seq_dim_profissional
-                inner join tb_dim_equipe tde on fact.coDimEquipe = tde.co_seq_dim_equipe
-                where p_equipe is null or tde.nu_ine = p_equipe
-                -- Aplicação de GROUP BY para garantir unicidade e otimização
-                group by
-                    fact.nuCns,
-                    fact.cpf          
-            ) as vinculados;
-        end;
-        $$;`
-    },
-
-    {
-        name: 'Dimensao Cadastro',
-        definition: `CREATE OR REPLACE FUNCTION dim_cadastro(data_referencia DATE, numero_ine text, p_populacao integer) 
-                RETURNS TABLE (
-                    total_mici INTEGER,
-                    total_mici_micdt INTEGER,
-                    total_micdt_desatualizada INTEGER,
-                    resultado FLOAT
-                ) AS $$
-                BEGIN
-                    RETURN QUERY
-                    WITH CTE_MICI AS (
-                        SELECT COUNT(*) AS total_mici
-                        FROM tb_acomp_cidadaos_vinculados tacv 
-                            WHERE st_possui_fci = 1 
-                            AND tacv.st_possui_fcdt = 0
-                            AND AGE(data_referencia, dt_ultima_atualizacao_cidadao) <= INTERVAL '24 months'
-                            AND nu_ine_vinc_equipe = numero_ine
-                    ),
-                    CTE_MICI_MICDT AS (
-                        SELECT COUNT(*) AS total_mici_micdt
-                        FROM tb_acomp_cidadaos_vinculados tacv 
-                            WHERE st_possui_fci = 1 
-                            AND tacv.st_possui_fcdt = 1
-                            AND AGE(data_referencia, dt_atualizacao_fcd) <= INTERVAL '24 months'
-                            AND nu_ine_vinc_equipe = numero_ine        
-                    ),
-                    CTE_MICDT_DESATUALIZADA AS (
-                        SELECT COUNT(*) AS total_micdt_desatualizada
-                        FROM tb_acomp_cidadaos_vinculados tacv 
-                            WHERE st_possui_fci = 1 
-                            AND tacv.st_possui_fcdt = 1
-                            AND AGE(data_referencia, dt_atualizacao_fcd) > INTERVAL '24 months'
-                            AND nu_ine_vinc_equipe = numero_ine        
-                    )
-                    SELECT 
-                        CTE_MICI.total_mici::INTEGER, 
-                        CTE_MICI_MICDT.total_mici_micdt::INTEGER, 
-                        CTE_MICDT_DESATUALIZADA.total_micdt_desatualizada::INTEGER,
-                        round(((((CTE_MICI.total_mici::INTEGER + CTE_MICDT_DESATUALIZADA.total_micdt_desatualizada::INTEGER) * 0.75) +
-                        (CTE_MICI_MICDT.total_mici_micdt * 1.5)*100)/p_populacao),2)::FLOAT AS resultado
-                    FROM CTE_MICI
-                    CROSS JOIN CTE_MICI_MICDT
-                    CROSS JOIN CTE_MICDT_DESATUALIZADA;
-                END;
-                $$ LANGUAGE plpgsql;`
+        name: 'Dimensao Vinculo',
+        definition: `CREATE OR REPLACE FUNCTION DIM_VINCULO(
+            QUADRIMESTRE DATE,
+            EQUIPE TEXT DEFAULT NULL
+        )
+        RETURNS TABLE(
+            EQUIPES text,
+            TOTAL_VINCULADO INTEGER,    
+            FCI_ATUALIZADA INTEGER,
+            PERC_FCI_ATUALIZADA FLOAT,
+            FCI_FCDT_ATUALIZADA INTEGER,
+            CIDADAO_SEM_FCI INTEGER,
+            CIDADOA_FCI_DESATUALIZADA INTEGER,
+            CIDADAO_SEM_FCDT INTEGER,
+            CIDADAO_SEM_CPF_CNS INTEGER,
+            RESULTADO FLOAT,
+            SCORE TEXT,
+            CLASSIFICACAO TEXT
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+            WITH CTE_EQUIPES AS (
+                SELECT 
+                    NU_INE AS INE,
+                    NO_EQUIPE AS NOME_EQUIPE
+                FROM TB_EQUIPE
+                LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
+                WHERE ST_ATIVO = 1 AND NU_MS = '70' 
+                ORDER BY NO_EQUIPE
+            ),
+            CTE_TOTAL_VINCULADOS AS ( --TOTAL CIDADAO VINCULCADO
+                SELECT 
+                    TOTAL_VINCULADOS.NU_INE_VINC_EQUIPE, 
+                    COUNT(*) AS TOTAL_CIDADAO		        		
+                FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTAL_VINCULADOS 
+                GROUP BY
+                    TOTAL_VINCULADOS.NU_INE_VINC_EQUIPE
+            ),
+            CTE_FCI_ATUALIZADAS AS (--TOTAL DE FCI ATUALIZADAS
+                SELECT 
+                    TOTALFCI.NU_INE_VINC_EQUIPE,
+                    COUNT(TOTALFCI.ST_POSSUI_FCI) AS TOTAL_FCI_ATUALIZADA		        		
+                FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTALFCI 
+                WHERE 
+                    TOTALFCI.ST_POSSUI_FCI = 1 AND TOTALFCI.ST_POSSUI_FCDT = 0 --OR TOTALFCI.ST_POSSUI_FCDT = 1)
+                AND TOTALFCI.DT_ULTIMA_ATUALIZACAO_CIDADAO >= QUADRIMESTRE - INTERVAL '24 MONTHS'
+                GROUP BY         	
+                    TOTALFCI.NU_INE_VINC_EQUIPE        	
+            ),
+            CTE_CIDADAO_SEM_FCI AS (--CIDADAO SEM FCI
+                SELECT 
+                    TOTALSEMFCI.NU_INE_VINC_EQUIPE,
+                    COUNT(TOTALSEMFCI.ST_POSSUI_FCI) AS TOTAL_SEM_FCI
+                FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTALSEMFCI 
+                WHERE 
+                    TOTALSEMFCI.ST_POSSUI_FCI = 0 --AND TOTALSEMFCI.ST_USAR_CADASTRO_INDIVIDUAL = 0
+                --OR TOTALSEMFCI.DT_ULTIMA_ATUALIZACAO_CIDADAO <= QUADRIMESTRE - INTERVAL '24 MONTHS'
+                GROUP BY         	
+                    TOTALSEMFCI.NU_INE_VINC_EQUIPE        	
+            ),
+            CTE_CIDADAO_FCI_DESATUALIZADA AS (--CIDADAO COM FCI DESATUALIZADA
+                SELECT 
+                    TOTALFCIDES.NU_INE_VINC_EQUIPE,
+                    COUNT(TOTALFCIDES.ST_POSSUI_FCI) AS TOTAL_FCI_DESATUALIZADA
+                FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTALFCIDES 
+                WHERE 
+                    TOTALFCIDES.ST_POSSUI_FCI = 1 --AND TOTALSEMFCI.ST_USAR_CADASTRO_INDIVIDUAL = 0
+                AND TOTALFCIDES.DT_ULTIMA_ATUALIZACAO_CIDADAO < QUADRIMESTRE - INTERVAL '24 MONTHS'
+                GROUP BY         	
+                    TOTALFCIDES.NU_INE_VINC_EQUIPE        	
+            ),
+            CTE_FCI_FCDT_ATUALIZADO AS (
+                SELECT 
+                    TOTAL_FCI_FCDT.NU_INE_VINC_EQUIPE,
+                    COUNT(TOTAL_FCI_FCDT.ST_POSSUI_FCDT) AS TOTAL_FCI_FCDT 
+                FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTAL_FCI_FCDT
+                WHERE 
+                    TOTAL_FCI_FCDT.ST_POSSUI_FCDT = 1 AND TOTAL_FCI_FCDT.ST_POSSUI_FCI = 1
+                AND TOTAL_FCI_FCDT.DT_ULTIMA_ATUALIZACAO_CIDADAO >= QUADRIMESTRE - INTERVAL '24 MONTHS'
+                AND TOTAL_FCI_FCDT.DT_ATUALIZACAO_FCD >= QUADRIMESTRE - INTERVAL '24 MONTHS'
+                GROUP BY
+                    TOTAL_FCI_FCDT.NU_INE_VINC_EQUIPE
+            ),
+            CTE_CIDADAO_SEM_CPF_CNS AS (
+                SELECT 
+                    TOTAL_CPF_CNS.NU_INE_VINC_EQUIPE,	
+                    COUNT(TOTAL_CPF_CNS.CO_SEQ_ACOMP_CIDADAOS_VINC) AS TOTAL_SEM_CPF_CNS
+                FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTAL_CPF_CNS
+                WHERE 
+                    TOTAL_CPF_CNS.NU_CPF_CIDADAO ISNULL 
+                AND TOTAL_CPF_CNS.NU_CNS_CIDADAO ISNULL
+                GROUP BY
+                    TOTAL_CPF_CNS.NU_INE_VINC_EQUIPE
+            ),
+            CTE_FCDT_DESATUALIZADA AS (
+                SELECT 
+                    TOTALSEMFCDT.NU_INE_VINC_EQUIPE,
+                    COUNT(TOTALSEMFCDT.ST_POSSUI_FCDT) AS FCDT_DESATUALIZADA		        		
+                FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTALSEMFCDT 
+                WHERE 
+                    TOTALSEMFCDT.ST_POSSUI_FCI = 1 AND (TOTALSEMFCDT.ST_POSSUI_FCDT = 0
+                OR TOTALSEMFCDT.DT_ULTIMA_ATUALIZACAO_CIDADAO < QUADRIMESTRE - INTERVAL '24 MONTHS')
+                GROUP BY         	
+                    TOTALSEMFCDT.NU_INE_VINC_EQUIPE 
+            )
+            SELECT 
+                CTE_EQUIPES.NOME_EQUIPE::TEXT AS EQUIPES,	
+                COALESCE(TVC.TOTAL_CIDADAO, 0)::INTEGER AS TOTAL_CIDADAO,
+                COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA, 0)::INTEGER AS SOMENTE_FCI_ATUALIZADA,
+                ROUND((COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA + TFCDT.TOTAL_FCI_FCDT , 0) * 100)::NUMERIC / 
+                COALESCE(TVC.TOTAL_CIDADAO, 0)::NUMERIC, 2)::FLOAT	AS PERC_FCI_ATUALIZADAS,
+                COALESCE(TFCDT.TOTAL_FCI_FCDT, 0)::INTEGER AS FCI_FCDT_ATUALIZADAS,
+                COALESCE(SEMFCI.TOTAL_SEM_FCI, 0)::INTEGER AS CIDADAO_SEM_FCI,
+                COALESCE(FCIDESAT.TOTAL_FCI_DESATUALIZADA, 0)::INTEGER AS FCI_DESATUALIZADA,
+                COALESCE(SEMFCDT.FCDT_DESATUALIZADA, 0)::INTEGER AS FCDT_DESATUALIZADA,
+                COALESCE(CSCC.TOTAL_SEM_CPF_CNS, 0)::INTEGER AS CIDADAO_SEM_CPF_CNS,
+                ROUND(((COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA, 0) * 0.75 +  
+                COALESCE(TFCDT.TOTAL_FCI_FCDT, 0) * 1.50) / 2500) * 100, 2)::FLOAT AS RESULTADO,
+                TO_CHAR(CASE 
+                    WHEN (((COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA, 0) * 0.75 +  
+                    COALESCE(TFCDT.TOTAL_FCI_FCDT, 0) * 1.50) / 2500) * 100) >= 85 THEN 3.00
+                    WHEN (((COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA, 0) * 0.75 +  
+                    COALESCE(TFCDT.TOTAL_FCI_FCDT, 0) * 1.50) / 2500) * 100) BETWEEN 65 AND 84.9 THEN 2.25
+                    WHEN (((COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA, 0) * 0.75 +  
+                    COALESCE(TFCDT.TOTAL_FCI_FCDT, 0) * 1.50) / 2500) * 100) BETWEEN 45 AND 64.9 THEN 1.50
+                    ELSE 0.75
+                END, 'FM999999990.00') AS SCORE,
+                CASE 
+                    WHEN (((COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA, 0) * 0.75 +  
+                    COALESCE(TFCDT.TOTAL_FCI_FCDT, 0) * 1.50) / 2500) * 100) >= 85 THEN 'ÓTIMO'
+                    WHEN (((COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA, 0) * 0.75 +  
+                    COALESCE(TFCDT.TOTAL_FCI_FCDT, 0) * 1.50) / 2500) * 100) BETWEEN 65 AND 84.9 THEN 'BOM'
+                    WHEN (((COALESCE(TFCIA.TOTAL_FCI_ATUALIZADA, 0) * 0.75 +  
+                    COALESCE(TFCDT.TOTAL_FCI_FCDT, 0) * 1.50) / 2500) * 100) BETWEEN 45 AND 64.9 THEN 'INSUFICIENTE'
+                    ELSE 'REGULAR'
+                END	AS CLASSIFICACAO
+            FROM CTE_EQUIPES
+            LEFT JOIN CTE_TOTAL_VINCULADOS TVC ON TVC.NU_INE_VINC_EQUIPE = CTE_EQUIPES.INE
+            LEFT JOIN CTE_FCI_ATUALIZADAS TFCIA ON TFCIA.NU_INE_VINC_EQUIPE = CTE_EQUIPES.INE
+            LEFT JOIN CTE_FCI_FCDT_ATUALIZADO TFCDT ON TFCDT.NU_INE_VINC_EQUIPE = CTE_EQUIPES.INE
+            LEFT JOIN CTE_CIDADAO_SEM_CPF_CNS CSCC ON CSCC.NU_INE_VINC_EQUIPE = CTE_EQUIPES.INE
+            LEFT JOIN CTE_CIDADAO_SEM_FCI SEMFCI ON SEMFCI.NU_INE_VINC_EQUIPE = CTE_EQUIPES.INE
+            LEFT JOIN CTE_FCDT_DESATUALIZADA SEMFCDT ON SEMFCDT.NU_INE_VINC_EQUIPE = CTE_EQUIPES.INE
+            LEFT JOIN CTE_CIDADAO_FCI_DESATUALIZADA FCIDESAT ON FCIDESAT.NU_INE_VINC_EQUIPE = CTE_EQUIPES.INE
+            WHERE 
+            (EQUIPE IS NULL OR CTE_EQUIPES.INE = EQUIPE)	
+            ORDER BY
+                RESULTADO DESC;    
+        END;
+        $$ LANGUAGE PLPGSQL;`
     },
 
     {
@@ -1166,9 +1191,9 @@ const functions = [
             inner join tb_dim_equipe tde on tde.co_seq_dim_equipe = tfai.co_dim_equipe_1
             where
                 CASE
-                    WHEN p_profissional = '999' THEN tfai.co_dim_cbo_1 not in(391, 392, 458, 465, 573, 574, 943, 944, 8890, 8891)
-                    WHEN p_profissional in ('238', '391', '458','574', '943', '8890') THEN tfai.co_dim_cbo_1 in (238, 391, 458, 574, 943, 8890)
-                    WHEN p_profissional in ('239', '392', '465','573', '944', '8891') THEN tfai.co_dim_cbo_1 in (239, 392, 465, 573, 944, 8891)
+                    WHEN p_profissional = '999' THEN tfai.co_dim_cbo_1 not in(27, 57, 238, 239,391, 392, 458, 465, 573, 574, 943, 944, 8890, 8891)
+                    WHEN p_profissional in ('27', '238', '391', '454', '458','574', '943', '8890') THEN tfai.co_dim_cbo_1 in (27, 238, 391, 454, 458, 574, 943, 8890)
+                    WHEN p_profissional in ('57', '239', '392', '465','573', '944', '8891') THEN tfai.co_dim_cbo_1 in (57, 239, 392, 465, 573, 944, 8891)
                     ELSE p_profissional is null
                 END
             AND tdp.st_registro_valido = 1 
@@ -1290,7 +1315,7 @@ const functions = [
         AND tcd.tp_cds_imovel = 1   
         AND (tfcd.co_dim_tempo_validade > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer	
         AND tfcd.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer)
-        AND tfcd.co_dim_cbo in (395, 468, 575, 945, 8892)	
+        AND tfcd.co_dim_cbo in (4, 395, 468, 575, 945, 8892)	
         AND (p_profissional is null or tdp.nu_cns = p_profissional)
         AND (p_equipe is null or tde.nu_ine = p_equipe)
         
@@ -1308,7 +1333,7 @@ const functions = [
         AND tcd.tp_cds_imovel = 1   
         AND (tfcd.co_dim_tempo_validade > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer	
         AND tfcd.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer)
-        AND tfcd.co_dim_cbo IN (395, 468, 575, 945)
+        AND tfcd.co_dim_cbo IN (4, 395, 468, 575, 945)
         AND (p_profissional IS NULL OR tdp.nu_cns = p_profissional)
         AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
     )
@@ -2843,6 +2868,24 @@ const functions = [
     },
     /*-----------------------------------------------------*/
     /*------------FUNÇÕES AUXILIARES -----------------------------*/
+    {
+        name: 'Listar INE Escolas',
+        definition: `create or replace function inep_escolas ()
+                returns table(
+                    inep varchar,
+                    escola varchar)
+                language plpgsql
+                as $$
+                begin
+                    return query
+                    select nu_identificador,
+                    no_estabelecimento
+                    from tb_dim_inep tdi 
+                    where no_estabelecimento notnull and nu_identificador <> '-';	
+                end;
+                $$`    
+    },
+
     {
         name: 'Lista ACS',
         definition: `create or replace function listar_acs()
