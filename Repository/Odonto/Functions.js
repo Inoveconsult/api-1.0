@@ -698,7 +698,7 @@ const functions = [
             EQUIPE TEXT DEFAULT NULL
         )
         RETURNS TABLE(
-            EQUIPES text,
+            EQUIPES TEXT,
             TOTAL_VINCULADO INTEGER,    
             FCI_ATUALIZADA INTEGER,
             PERC_FCI_ATUALIZADA FLOAT,
@@ -727,6 +727,7 @@ const functions = [
                     TOTAL_VINCULADOS.NU_INE_VINC_EQUIPE, 
                     COUNT(*) AS TOTAL_CIDADAO		        		
                 FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTAL_VINCULADOS 
+                WHERE (TOTAL_VINCULADOS.NU_CPF_CIDADAO IS NOT NULL OR TOTAL_VINCULADOS.NU_CNS_CIDADAO IS NOT NULL) 
                 GROUP BY
                     TOTAL_VINCULADOS.NU_INE_VINC_EQUIPE
             ),
@@ -781,8 +782,8 @@ const functions = [
                     COUNT(TOTAL_CPF_CNS.CO_SEQ_ACOMP_CIDADAOS_VINC) AS TOTAL_SEM_CPF_CNS
                 FROM TB_ACOMP_CIDADAOS_VINCULADOS TOTAL_CPF_CNS
                 WHERE 
-                    TOTAL_CPF_CNS.NU_CPF_CIDADAO ISNULL 
-                AND TOTAL_CPF_CNS.NU_CNS_CIDADAO ISNULL
+                    (TOTAL_CPF_CNS.NU_CPF_CIDADAO ISNULL 
+                AND TOTAL_CPF_CNS.NU_CNS_CIDADAO ISNULL)
                 GROUP BY
                     TOTAL_CPF_CNS.NU_INE_VINC_EQUIPE
             ),
@@ -1019,191 +1020,108 @@ const functions = [
         $$`
     },
 
-    {
-        name: 'FCI Atualiadas',
-        definition: `CREATE OR REPLACE FUNCTION fci_atualizadas(
-        equipe VARCHAR DEFAULT NULL, 
-        p_data date default null)
-    RETURNS TABLE (
-        --ine VARCHAR,
-        --nome_equipe VARCHAR,
-        FCIs_novas INTEGER,
-        FCIs_atualizadas INTEGER,
-        recusas INTEGER)
-    AS $$
-    DECLARE
-        v_data varchar;
-    BEGIN
-            -- Se p_data for fornecida, converte para o formato 'YYYYMMDD', caso contrário, usa a data atual
-        if p_data is not null then
-            v_data := to_char(p_data, 'YYYYMMDD');
-        else
-            v_data := to_char(CURRENT_DATE, 'YYYYMMDD');
-        end if;
-        RETURN QUERY
-        SELECT
-            --fact.ine,
-            --fact.nome_equipe AS nome_equipe,
-            COALESCE(SUM(CASE WHEN ((fact.nuCns != '0' OR fact.nuCpfCidadao != '0') AND (fact.stRecusaCadastro = 0 AND fact.nuUuidFicha = fact.nuUuidFichaOrigem)) THEN 1 ELSE 0 END), 0)::INTEGER AS FCIs_novas,
-            COALESCE(SUM(CASE WHEN ((fact.nuCns != '0' OR fact.nuCpfCidadao != '0') AND (fact.stRecusaCadastro = 0 AND fact.nuUuidFicha != fact.nuUuidFichaOrigem)) THEN 1 ELSE 0 END), 0)::INTEGER AS FCIs_atualizadas,
-            COALESCE(SUM(CASE WHEN (fact.nuCns = '0' AND fact.nuCpfCidadao = '0' AND (fact.stRecusaCadastro = 0 AND fact.nuUuidFicha != fact.nuUuidFichaOrigem)) THEN 1 ELSE 0 END), 0)::INTEGER AS recusas
-        FROM (
-            SELECT
-                tfci.co_dim_cbo AS coDimCbo,
-                tfci.co_dim_equipe AS coDimEquipe,
-                tfci.co_dim_municipio AS coDimMunicipio,
-                tfci.co_dim_profissional AS coDimProfissional,
-                tde.no_equipe AS nome_equipe,
-                tde.nu_ine::varchar as ine,	
-                tfci.co_dim_unidade_saude AS coDimUnidadeSaude,
-                tfci.co_seq_fat_cad_individual AS coSeqFatCadIndividual,
-                tfci.nu_cns AS nuCns,
-                tfci.nu_cpf_cidadao AS nuCpfCidadao,
-                tfci.nu_micro_area AS nuMicroArea,
-                tfci.nu_uuid_ficha AS nuUuidFicha,
-                tfci.nu_uuid_ficha_origem AS nuUuidFichaOrigem,
-                tfci.st_recusa_cadastro AS stRecusaCadastro,
-                tfci.st_ficha_inativa AS inativa,
-                tfci.co_dim_tempo_validade
-            FROM
-                tb_fat_cad_individual tfci
-            JOIN 
-                tb_dim_profissional tdp ON tdp.co_seq_dim_profissional = tfci.co_dim_profissional
-            JOIN 
-                tb_dim_equipe tde ON tde.co_seq_dim_equipe = tfci.co_dim_equipe
-            JOIN 
-                tb_dim_municipio tdm ON tdm.co_seq_dim_municipio = tfci.co_dim_municipio
-            JOIN
-                tb_dim_unidade_saude tdus ON tdus.co_seq_dim_unidade_saude = tfci.co_dim_unidade_saude
-            JOIN 
-                tb_dim_cbo tdc ON tdc.co_seq_dim_cbo = tfci.co_dim_cbo
-            WHERE
-                tfci.st_gerado_automaticamente = '0' 
-                AND tfci.st_ficha_inativa = 0
-                AND AGE(v_data::date, TO_DATE(tfci.co_dim_tempo_validade::TEXT, 'YYYYMMDD')) <= INTERVAL '6 MONTH'
-        ) AS fact
-        WHERE
-            (equipe IS NULL OR fact.ine = equipe)
-            AND TO_DATE(fact.co_dim_tempo_validade::TEXT, 'YYYYMMDD') <= v_data::date            
-        GROUP BY 
-            fact.ine,
-            fact.nome_equipe
-        ORDER BY
-            fact.nome_equipe;
-    END;
-    $$ LANGUAGE plpgsql;`
-    },
-
-    {name: 'Bolsa Familia',
-        definition: `create or replace function bolsa_familia(
-                p_equipe varchar default null)
-            returns table(bolsa_familia integer)
-            language plpgsql
-            as $$
-            begin
-                return query
-                select COUNT(*)::integer as pbf from (select tcbf.co_seq_cidadao_bolsa_familia, tcbf.no_cidadao, nu_documento, tp_documento,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY tcbf.no_cidadao 
-                            order by tcbf.no_cidadao asc
-                        ) AS rn
-                    from tb_cidadao_bolsa_familia tcbf
-                    inner join tb_fat_cidadao_pec tfcp on tfcp.nu_cpf_cidadao = tcbf.nu_documento or tfcp.nu_cns = tcbf.nu_documento 	
-                    inner join tb_dim_equipe tde on tde.co_seq_dim_equipe = tfcp.co_dim_equipe_vinc
-                    where p_equipe is null or tde.nu_ine = p_equipe) as query_pbf;
-            end;
-            $$`
-    },
-
+  
     /*------------------INDICADORES GERAIS APS ------------*/
     {
         name: 'Atendimento Diario ESF',
-        definition: `create or replace function atendimento_diario_aps(
-        p_profissional varchar default null,
-        p_mes integer default null,
-        p_ano integer default null)
-    returns table(
-        equipe varchar, 
-        profissional varchar, 
-        _1 bigint, _2 bigint, _3 bigint, _4 bigint, _5 bigint, _6 bigint, _7 bigint, _8 bigint, _9 bigint,
-        _10 bigint, _11 bigint, _12 bigint, _13 bigint, _14 bigint, _15 bigint, _16 bigint, _17 bigint, _18 bigint, 
-        _19 bigint, _20 bigint, _21 bigint, _22 bigint, _23 bigint, _24 bigint, _25 bigint, _26 bigint, _27 bigint, _28 bigint,
-        _29 bigint, _30 bigint, _31 bigint, total bigint)
-    language plpgsql
-    as $$
-    declare
-        v_mes integer;
-        v_ano integer;
-        v_dias_no_mes integer;
-    begin
-        -- Se os parâmetros de mês e ano forem nulos, calculamos o mês e ano do mês passado
-        if p_mes is null or p_ano is null then
-            select EXTRACT(MONTH FROM CURRENT_DATE), EXTRACT(YEAR FROM CURRENT_DATE)
-            into v_mes, v_ano;
-        else
-            v_mes := p_mes;
-            v_ano := p_ano;
-        end if;
+        definition: `CREATE OR REPLACE FUNCTION ATENDIMENTO_DIARIO_APS(
+                P_PROFISSIONAL VARCHAR DEFAULT NULL,
+                P_MES INTEGER DEFAULT NULL,
+                P_ANO INTEGER DEFAULT NULL)
+            RETURNS TABLE(
+                EQUIPE VARCHAR, 
+                PROFISSIONAL VARCHAR, 
+                _1 BIGINT, _2 BIGINT, _3 BIGINT, _4 BIGINT, _5 BIGINT, _6 BIGINT, _7 BIGINT, _8 BIGINT, _9 BIGINT,
+                _10 BIGINT, _11 BIGINT, _12 BIGINT, _13 BIGINT, _14 BIGINT, _15 BIGINT, _16 BIGINT, _17 BIGINT, _18 BIGINT, 
+                _19 BIGINT, _20 BIGINT, _21 BIGINT, _22 BIGINT, _23 BIGINT, _24 BIGINT, _25 BIGINT, _26 BIGINT, _27 BIGINT, _28 BIGINT,
+                _29 BIGINT, _30 BIGINT, _31 BIGINT, TOTAL BIGINT)
+            LANGUAGE PLPGSQL
+            AS $$
+            DECLARE
+                V_MES INTEGER;
+                V_ANO INTEGER;
+                V_DIAS_NO_MES INTEGER;
+            BEGIN
+                -- SE OS PARÂMETROS DE MÊS E ANO FOREM NULOS, CALCULAMOS O MÊS E ANO DO MÊS PASSADO
+                IF P_MES IS NULL OR P_ANO IS NULL THEN
+                    SELECT EXTRACT(MONTH FROM CURRENT_DATE), EXTRACT(YEAR FROM CURRENT_DATE)
+                    INTO V_MES, V_ANO;
+                ELSE
+                    V_MES := P_MES;
+                    V_ANO := P_ANO;
+                END IF;
 
-        -- Calcula a quantidade de dias no mês escolhido
-        select EXTRACT(day FROM (DATE_TRUNC('month', TO_DATE(v_ano || '-' || v_mes || '-01', 'YYYY-MM-DD') + INTERVAL '1 month') - INTERVAL '1 day'))
-        into v_dias_no_mes;
-
-        return query
-        select dias.no_equipe, dias.no_profissional,
-            count(*) FILTER (where DIA = 1) as "_1",
-            count(*) FILTER (where DIA = 2) as "_2",
-            count(*) FILTER (where DIA = 3) as "_3",
-            count(*) FILTER (where DIA = 4) as "_4",
-            count(*) FILTER (where DIA = 5) as "_5",
-            count(*) FILTER (where DIA = 6) as "_6",
-            count(*) FILTER (where DIA = 7) as "_7",
-            count(*) FILTER (where DIA = 8) as "_8",
-            count(*) FILTER (where DIA = 9) as "_9",
-            count(*) FILTER (where DIA = 10) as "_10",
-            count(*) FILTER (where DIA = 11) as "_11",
-            count(*) FILTER (where DIA = 12) as "_12",
-            count(*) FILTER (where DIA = 13) as "_13",
-            count(*) FILTER (where DIA = 14) as "_14",
-            count(*) FILTER (where DIA = 15) as "_15",
-            count(*) FILTER (where DIA = 16) as "_16",
-            count(*) FILTER (where DIA = 17) as "_17",
-            count(*) FILTER (where DIA = 18) as "_18",
-            count(*) FILTER (where DIA = 19) as "_19",
-            count(*) FILTER (where DIA = 20) as "_20",
-            count(*) FILTER (where DIA = 21) as "_21",
-            count(*) FILTER (where DIA = 22) as "_22",
-            count(*) FILTER (where DIA = 23) as "_23",
-            count(*) FILTER (where DIA = 24) as "_24",
-            count(*) FILTER (where DIA = 25) as "_25",
-            count(*) FILTER (where DIA = 26) as "_26",
-            count(*) FILTER (where DIA = 27) as "_27",
-            count(*) FILTER (where DIA = 28) as "_28",
-            case when v_dias_no_mes >= 29 then count(*) FILTER (where DIA = 29) else null end as "_29",
-            case when v_dias_no_mes >= 30 then count(*) FILTER (where DIA = 30) else null end as "_30",
-            case when v_dias_no_mes = 31 then count(*) FILTER (where DIA = 31) else null end as "_31",
-            count(*) as total
-        from (
-            select tde.no_equipe, tdp.no_profissional, 
-                EXTRACT(DAY FROM TO_DATE(tfai.co_dim_tempo::TEXT, 'YYYYMMDD')) as DIA
-            from tb_fat_atendimento_individual tfai 
-            inner join tb_dim_profissional tdp on tdp.co_seq_dim_profissional = tfai.co_dim_profissional_1
-            inner join tb_dim_equipe tde on tde.co_seq_dim_equipe = tfai.co_dim_equipe_1
-            where
-                CASE
-                    WHEN p_profissional = '999' THEN tfai.co_dim_cbo_1 not in(27, 57, 238, 239,391, 392, 458, 465, 573, 574, 943, 944, 8890, 8891)
-                    WHEN p_profissional in ('27', '238', '391', '454', '458','574', '943', '8890') THEN tfai.co_dim_cbo_1 in (27, 238, 391, 454, 458, 574, 943, 8890)
-                    WHEN p_profissional in ('57', '239', '392', '465','573', '944', '8891') THEN tfai.co_dim_cbo_1 in (57, 239, 392, 465, 573, 944, 8891)
-                    ELSE p_profissional is null
-                END
-            AND tdp.st_registro_valido = 1 
-            AND tfai.co_dim_tempo >= '20240101'
-            AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfai.co_dim_tempo::TEXT, 'YYYYMMDD')) = v_mes)
-            AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfai.co_dim_tempo::TEXT, 'YYYYMMDD')) = v_ano)
-        ) as dias
-        group by dias.no_equipe, dias.no_profissional;
-    end;
-    $$;`
+                -- CALCULA A QUANTIDADE DE DIAS NO MÊS ESCOLHIDO
+                SELECT EXTRACT(DAY FROM (DATE_TRUNC('MONTH', TO_DATE(V_ANO || '-' || V_MES || '-01', 'YYYY-MM-DD') + INTERVAL '1 MONTH') - INTERVAL '1 DAY'))
+                INTO V_DIAS_NO_MES;
+                RETURN QUERY
+                SELECT DIAS.EQUIPE, DIAS.NO_PROFISSIONAL,
+                    COUNT(*) FILTER (WHERE DIA = 1) AS "_1",
+                    COUNT(*) FILTER (WHERE DIA = 2) AS "_2",
+                    COUNT(*) FILTER (WHERE DIA = 3) AS "_3",
+                    COUNT(*) FILTER (WHERE DIA = 4) AS "_4",
+                    COUNT(*) FILTER (WHERE DIA = 5) AS "_5",
+                    COUNT(*) FILTER (WHERE DIA = 6) AS "_6",
+                    COUNT(*) FILTER (WHERE DIA = 7) AS "_7",
+                    COUNT(*) FILTER (WHERE DIA = 8) AS "_8",
+                    COUNT(*) FILTER (WHERE DIA = 9) AS "_9",
+                    COUNT(*) FILTER (WHERE DIA = 10) AS "_10",
+                    COUNT(*) FILTER (WHERE DIA = 11) AS "_11",
+                    COUNT(*) FILTER (WHERE DIA = 12) AS "_12",
+                    COUNT(*) FILTER (WHERE DIA = 13) AS "_13",
+                    COUNT(*) FILTER (WHERE DIA = 14) AS "_14",
+                    COUNT(*) FILTER (WHERE DIA = 15) AS "_15",
+                    COUNT(*) FILTER (WHERE DIA = 16) AS "_16",
+                    COUNT(*) FILTER (WHERE DIA = 17) AS "_17",
+                    COUNT(*) FILTER (WHERE DIA = 18) AS "_18",
+                    COUNT(*) FILTER (WHERE DIA = 19) AS "_19",
+                    COUNT(*) FILTER (WHERE DIA = 20) AS "_20",
+                    COUNT(*) FILTER (WHERE DIA = 21) AS "_21",
+                    COUNT(*) FILTER (WHERE DIA = 22) AS "_22",
+                    COUNT(*) FILTER (WHERE DIA = 23) AS "_23",
+                    COUNT(*) FILTER (WHERE DIA = 24) AS "_24",
+                    COUNT(*) FILTER (WHERE DIA = 25) AS "_25",
+                    COUNT(*) FILTER (WHERE DIA = 26) AS "_26",
+                    COUNT(*) FILTER (WHERE DIA = 27) AS "_27",
+                    COUNT(*) FILTER (WHERE DIA = 28) AS "_28",
+                    CASE WHEN V_DIAS_NO_MES >= 29 THEN COUNT(*) FILTER (WHERE DIA = 29) ELSE NULL END AS "_29",
+                    CASE WHEN V_DIAS_NO_MES >= 30 THEN COUNT(*) FILTER (WHERE DIA = 30) ELSE NULL END AS "_30",
+                    CASE WHEN V_DIAS_NO_MES = 31 THEN COUNT(*) FILTER (WHERE DIA = 31) ELSE NULL END AS "_31",
+                    COUNT(*) AS TOTAL
+                FROM (
+                    SELECT TDE.NO_EQUIPE AS EQUIPE, TDP.NO_PROFISSIONAL, 
+                        EXTRACT(DAY FROM TO_DATE(TFAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) AS DIA
+                    FROM TB_FAT_ATENDIMENTO_INDIVIDUAL TFAI 
+                    INNER JOIN TB_DIM_PROFISSIONAL TDP ON TDP.CO_SEQ_DIM_PROFISSIONAL = TFAI.CO_DIM_PROFISSIONAL_1
+                    INNER JOIN TB_DIM_EQUIPE TDE ON TDE.CO_SEQ_DIM_EQUIPE = TFAI.CO_DIM_EQUIPE_1
+                    WHERE
+                        CASE				
+                            WHEN P_PROFISSIONAL IN (SELECT CO_SEQ_DIM_CBO::VARCHAR FROM TB_DIM_CBO 
+                                                WHERE NU_CBO IN ('223565')) 
+                                                THEN TFAI.CO_DIM_CBO_1 IN (SELECT CO_SEQ_DIM_CBO::INTEGER FROM TB_DIM_CBO 
+                                                WHERE NU_CBO IN ('223565'))
+                            WHEN P_PROFISSIONAL IN (SELECT CO_SEQ_DIM_CBO::VARCHAR FROM TB_DIM_CBO 
+                                                WHERE NU_CBO IN ('225142')) 
+                                                THEN TFAI.CO_DIM_CBO_1 IN (SELECT CO_SEQ_DIM_CBO::INTEGER FROM TB_DIM_CBO 
+                                                WHERE NU_CBO IN ('225142'))
+                            --WHEN P_PROFISSIONAL NOT IN ('55','57', '392', '465', '944', '8891') THEN TFAI.CO_DIM_CBO_1 IN (55, 57, 392, 465, 944, 8891)
+                            ELSE P_PROFISSIONAL IS NULL
+                        END
+                    AND TDE.NU_INE IN (SELECT 
+                        TB_EQUIPE.NU_INE AS INE			
+                        FROM TB_EQUIPE
+                        LEFT JOIN TB_TIPO_EQUIPE  ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
+                        LEFT JOIN TB_DIM_EQUIPE TDE1 ON TDE1.NU_INE = TB_EQUIPE.NU_INE 
+                        WHERE ST_ATIVO = 1 AND NU_MS = '70' 
+                    ORDER BY TB_EQUIPE.NO_EQUIPE)	
+                    AND TDP.ST_REGISTRO_VALIDO = 1 
+                    AND TFAI.CO_DIM_TEMPO >= '20240101'
+                    AND (P_MES IS NULL OR EXTRACT(MONTH FROM TO_DATE(TFAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) = V_MES)
+                    AND (P_ANO IS NULL OR EXTRACT(YEAR FROM TO_DATE(TFAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) = V_ANO)
+                ) AS DIAS
+                GROUP BY DIAS.EQUIPE, DIAS.NO_PROFISSIONAL;
+            END;
+            $$;`
     },
 
     {
@@ -1517,91 +1435,6 @@ const functions = [
         $$`
     },
 
-    {name:'Resumo Bolsa Familia',
-        definition:`CREATE OR replace FUNCTION RESUMO_PBF(
-        P_EQUIPE VARCHAR DEFAULT NULL,
-        P_VIGENCIA VARCHAR DEFAULT NULL)
-        RETURNS TABLE (TOTAL_PBF INTEGER,RECONHECIDOS_ESUS INTEGER,
-        NAO_RECONHECIDO_ESUS INTEGER, CPF_RECONHECIDO INTEGER, 
-                        CNS_RECONHECIDO INTEGER)
-    LANGUAGE PLPGSQL
-    AS $$
-    BEGIN
-        RETURN QUERY
-    WITH CTE_Cidadao AS (
-        SELECT 
-            no_cidadao,
-            nu_documento,
-            tp_documento
-        FROM 
-            tb_cidadao_bolsa_familia
-        WHERE 
-        tp_documento IN ('CPF', 'CNS', 'NIS') -- Filtrar no início
-    ),
-    CTE_Agregado AS (
-        SELECT 
-            no_cidadao,
-            MAX(CASE WHEN tp_documento = 'CPF' THEN nu_documento END) AS cpf,
-            MAX(CASE WHEN tp_documento = 'CNS' THEN nu_documento END) AS cns,
-            MAX(CASE WHEN tp_documento = 'NIS' THEN nu_documento END) AS nis
-        FROM 
-            CTE_Cidadao
-        GROUP BY 
-            no_cidadao
-    ),
-    CTE_Localizados AS (
-        SELECT distinct
-            ca.no_cidadao,
-            ca.cpf,
-            ca.cns,
-            ca.nis,
-            --tde.nu_ine,
-            CASE 
-                WHEN CA.CPF = tfcp.nu_cpf_cidadao OR CA.CNS = tfcp.nu_cns THEN 'SIM'
-                ELSE 'NÃO'
-            END AS localizados,
-            CASE 
-                WHEN tfcp.nu_cpf_cidadao = ca.cpf THEN 'SIM'
-                ELSE 'NÃO'
-            END AS cpf_identificado,
-            CASE 
-                WHEN tfcp.nu_cns = ca.cns THEN 'SIM'
-            ELSE 'NÃO'
-            END AS cns_identificado
-        FROM 
-            CTE_Agregado ca
-        LEFT JOIN 
-            tb_fat_cidadao_pec tfcp 
-            ON (tfcp.nu_cpf_cidadao = ca.cpf AND ca.cpf IS NOT NULL)
-            OR (tfcp.nu_cns = ca.cns AND ca.cns IS NOT NULL)
-        LEFT JOIN 
-            tb_dim_equipe tde 
-            ON tde.co_seq_dim_equipe = tfcp.co_dim_equipe_vinc
-        where
-            p_equipe is null or tde.nu_ine = p_equipe
-    ),
-    CTE_Totalizados AS (
-        SELECT 
-            COUNT(*) AS total,
-            SUM(CASE WHEN localizados = 'SIM' THEN 1 ELSE 0 END) AS total_localizados,
-            SUM(CASE WHEN localizados = 'NÃO' THEN 1 ELSE 0 END) AS total_nao_localizados,
-            SUM(CASE WHEN cpf_identificado = 'SIM' THEN 1 ELSE 0 END) AS total_cpf_localizado,
-            SUM(CASE WHEN cns_identificado = 'SIM' THEN 1 ELSE 0 END) AS total_cns_localizado
-        FROM 
-            CTE_Localizados
-    )
-    SELECT 
-        total::integer,
-        total_localizados::integer,
-        total_nao_localizados::integer,
-        total_cpf_localizado::integer,
-        total_cns_localizado::integer
-    FROM 
-        CTE_Totalizados;
-    END;
-    $$`
-    },
-
     {name:'Listagem Duplicados',
         definition: `CREATE OR REPLACE FUNCTION LISTAR_DUPLICADOS() 
         RETURNS TABLE (
@@ -1719,8 +1552,299 @@ const functions = [
             CROSS JOIN LISTA_DUPLICADOS LD;
         END;
         $$ LANGUAGE PLPGSQL;`
-
     },
+
+    {
+        name: 'FCI sem CNS & CPF',
+        definition: `CREATE OR REPLACE FUNCTION FCI_SEM_DOCUMENTO (
+            P_EQUIPE VARCHAR DEFAULT NULL)
+        RETURNS TABLE(
+            NOME VARCHAR,
+            DATA_NASC VARCHAR, 
+            SEXO VARCHAR, 
+            CPF VARCHAR,
+            CNS VARCHAR,
+            ULTIMA_ATUALIZACAO VARCHAR,
+            INE VARCHAR, 
+            EQUIPE VARCHAR, 
+            MICROAREA VARCHAR,
+            TIPO_CADASTRO VARCHAR)
+        AS $$
+        BEGIN
+            RETURN QUERY
+                SELECT 
+                NO_CIDADAO AS NOME,
+                TO_CHAR(DT_NASCIMENTO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS DATA_NASC,
+                NO_SEXO_CIDADAO AS SEXO,
+                NU_CPF_CIDADAO AS CPF,
+                NU_CNS_CIDADAO AS CNS,
+                TO_CHAR(DT_ULTIMA_ATUALIZACAO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS ULTIMA_ATUALIZACAO,
+                NU_INE_VINC_EQUIPE AS INE,
+                NO_EQUIPE_VINC_EQUIPE AS NOME_EQUIPE,	
+                NU_MICRO_AREA_TB_CIDADAO  AS MICRO_AREA,
+                CASE 
+                    WHEN ST_POSSUI_FCI = 1 THEN 'FCI'
+                    ELSE 'CC'
+                END::VARCHAR AS TIPO_CADASTRO
+            FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
+            WHERE 
+                (NU_CNS_CIDADAO ISNULL AND NU_CPF_CIDADAO ISNULL)
+                AND (P_EQUIPE IS NULL OR NU_INE_VINC_EQUIPE = P_EQUIPE)
+            ORDER BY INE ASC;
+        END;
+        $$ LANGUAGE PLPGSQL;`
+    },
+
+    {
+        name:'FCI DESATUALIZADAS',
+        definition: `CREATE OR REPLACE FUNCTION FCI_DESATUALIZADA (
+            P_EQUIPE VARCHAR DEFAULT NULL)
+        RETURNS TABLE(
+            NOME VARCHAR,
+            DATA_NASC VARCHAR, 
+            SEXO VARCHAR, 
+            CPF VARCHAR,
+            CNS VARCHAR,
+            ULTIMA_ATUALIZACAO VARCHAR,
+            INE VARCHAR, 
+            EQUIPE VARCHAR, 
+            MICROAREA VARCHAR,
+            TIPO_CADASTRO VARCHAR)
+        AS $$
+        BEGIN
+            RETURN QUERY
+                SELECT 
+                NO_CIDADAO AS NOME,
+                TO_CHAR(DT_NASCIMENTO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS DATA_NASC,
+                NO_SEXO_CIDADAO AS SEXO,
+                CASE
+                    WHEN NU_CPF_CIDADAO IS NULL THEN '****'
+                    ELSE NU_CPF_CIDADAO 
+                END AS CPF,
+                
+                CASE 
+                    WHEN NU_CNS_CIDADAO IS NULL THEN '****'
+                    ELSE NU_CNS_CIDADAO
+                END AS CNS,
+                TO_CHAR(DT_ULTIMA_ATUALIZACAO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS ULTIMA_ATUALIZACAO,
+                NU_INE_VINC_EQUIPE AS INE,
+                NO_EQUIPE_VINC_EQUIPE AS NOME_EQUIPE,	
+                CASE
+                    WHEN NU_MICRO_AREA_DOMICILIO  IS not NULL THEN NU_MICRO_AREA_DOMICILIO 
+                    ELSE '****' 
+                END AS MICRO_AREA,
+                CASE 
+                    WHEN ST_POSSUI_FCI = 1 THEN 'FCI'
+                    ELSE 'CC'
+                END::VARCHAR AS TIPO_CADASTRO
+            FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
+            WHERE
+                (NU_CNS_CIDADAO IS NOT NULL OR NU_CPF_CIDADAO IS NOT NULL)
+                AND ST_POSSUI_FCI = 1
+                AND	DT_ULTIMA_ATUALIZACAO_CIDADAO < (CURRENT_DATE - INTERVAL '24 MONTHS')
+                AND (P_EQUIPE IS NULL OR NU_INE_VINC_EQUIPE = P_EQUIPE)
+            ORDER BY NOME ASC;
+        END;
+        $$ LANGUAGE PLPGSQL;`
+    },
+
+    {
+        name: 'Cidadão sem FCDT',
+        definition: `CREATE OR REPLACE FUNCTION CIDADAO_SEM_FCDT (
+            P_EQUIPE VARCHAR DEFAULT NULL)
+        RETURNS TABLE(
+            NOME VARCHAR,
+            DATA_NASC VARCHAR, 
+            SEXO VARCHAR, 
+            CPF VARCHAR,
+            CNS VARCHAR,
+            ULTIMA_ATUALIZACAO VARCHAR,
+            INE VARCHAR, 
+            EQUIPE VARCHAR, 
+            MICROAREA VARCHAR,
+            TIPO_CADASTRO VARCHAR)
+        AS $$
+        BEGIN
+            RETURN QUERY
+                SELECT 
+                NO_CIDADAO AS NOME,
+                TO_CHAR(DT_NASCIMENTO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS DATA_NASC,
+                NO_SEXO_CIDADAO AS SEXO,
+                CASE
+                    WHEN NU_CPF_CIDADAO IS NULL THEN '****'
+                    ELSE NU_CPF_CIDADAO 
+                END AS CPF,		
+                CASE 
+                    WHEN NU_CNS_CIDADAO IS NULL THEN '****'
+                    ELSE NU_CNS_CIDADAO
+                END AS CNS,
+                TO_CHAR(DT_ULTIMA_ATUALIZACAO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS ULTIMA_ATUALIZACAO,
+                NU_INE_VINC_EQUIPE AS INE,
+                NO_EQUIPE_VINC_EQUIPE AS NOME_EQUIPE,	
+                CASE
+                    WHEN NU_MICRO_AREA_TB_CIDADAO IS NOT NULL THEN NU_MICRO_AREA_TB_CIDADAO 
+                    ELSE '****' 
+                END AS MICRO_AREA,
+                CASE 
+                    WHEN ST_POSSUI_FCI = 1 THEN 'FCI'
+                    ELSE 'CC'
+                END::VARCHAR AS TIPO_CADASTRO
+            FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
+            WHERE
+                (NU_CNS_CIDADAO IS NOT NULL OR NU_CPF_CIDADAO IS NOT NULL)
+                AND (ST_POSSUI_FCDT = 0 AND ST_POSSUI_FCI = 1)
+                AND	DT_ULTIMA_ATUALIZACAO_CIDADAO < (CURRENT_DATE - INTERVAL '24 MONTHS')
+                AND (P_EQUIPE IS NULL OR NU_INE_VINC_EQUIPE = P_EQUIPE)
+            ORDER BY NOME ASC;
+        END;
+        $$ LANGUAGE PLPGSQL;`
+    },
+
+    {
+        name: 'Cidadão sem FCI',
+        definition: `CREATE OR REPLACE FUNCTION CIDADAO_SEM_FCI (
+            P_EQUIPE VARCHAR DEFAULT NULL)
+        RETURNS TABLE(
+            NOME VARCHAR,
+            DATA_NASC VARCHAR, 
+            SEXO VARCHAR, 
+            CPF VARCHAR,
+            CNS VARCHAR,
+            ULTIMA_ATUALIZACAO VARCHAR,
+            INE VARCHAR, 
+            EQUIPE VARCHAR, 
+            MICROAREA VARCHAR,
+            TIPO_CADASTRO VARCHAR)
+        AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT 
+                NO_CIDADAO AS NOME,
+                TO_CHAR(DT_NASCIMENTO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS DATA_NASC,
+                NO_SEXO_CIDADAO AS SEXO,
+                CASE
+                    WHEN NU_CPF_CIDADAO IS NULL THEN '****'
+                    ELSE NU_CPF_CIDADAO 
+                END AS CPF,		
+                CASE 
+                    WHEN NU_CNS_CIDADAO IS NULL THEN '****'
+                    ELSE NU_CNS_CIDADAO
+                END AS CNS,
+                TO_CHAR(DT_ULTIMA_ATUALIZACAO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS ULTIMA_ATUALIZACAO,
+                NU_INE_VINC_EQUIPE AS INE,
+                NO_EQUIPE_VINC_EQUIPE AS NOME_EQUIPE,	
+                CASE
+                    WHEN NU_MICRO_AREA_DOMICILIO  IS NOT NULL THEN NU_MICRO_AREA_DOMICILIO 
+                    ELSE '****' 
+                END AS MICRO_AREA,
+                CASE 
+                    WHEN ST_POSSUI_FCI = 1 THEN 'FCI'
+                    ELSE 'CC'
+                END::VARCHAR AS TIPO_CADASTRO
+            FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
+            WHERE
+                (NU_CNS_CIDADAO IS NOT NULL OR NU_CPF_CIDADAO IS NOT NULL)
+                AND ST_POSSUI_FCI = 0
+                AND (P_EQUIPE IS NULL OR NU_INE_VINC_EQUIPE = P_EQUIPE)
+            ORDER BY NOME ASC;
+        END;
+        $$ LANGUAGE PLPGSQL`
+    },
+
+    /*-----------------EMULTI --------------------------------*/ 
+    {
+        name: 'Atendimento Diário eMulti',
+        definition: `CREATE OR REPLACE FUNCTION REGISTRO_DIARIO_EMULTI(
+            P_EQUIPE VARCHAR DEFAULT NULL,
+            P_MES INTEGER DEFAULT NULL,
+            P_ANO INTEGER DEFAULT NULL)
+        RETURNS TABLE(
+            OCUPACAO VARCHAR, 
+            PROFISSIONAL VARCHAR, 
+            _1 BIGINT, _2 BIGINT, _3 BIGINT, _4 BIGINT, _5 BIGINT, _6 BIGINT, _7 BIGINT, _8 BIGINT, _9 BIGINT,
+            _10 BIGINT, _11 BIGINT, _12 BIGINT, _13 BIGINT, _14 BIGINT, _15 BIGINT, _16 BIGINT, _17 BIGINT, _18 BIGINT, 
+            _19 BIGINT, _20 BIGINT, _21 BIGINT, _22 BIGINT, _23 BIGINT, _24 BIGINT, _25 BIGINT, _26 BIGINT, _27 BIGINT, _28 BIGINT,
+            _29 BIGINT, _30 BIGINT, _31 BIGINT, TOTAL BIGINT)
+        LANGUAGE PLPGSQL
+        AS $$
+        DECLARE
+            V_MES INTEGER;
+            V_ANO INTEGER;
+            V_DIAS_NO_MES INTEGER;
+        BEGIN
+            -- SE OS PARÂMETROS DE MÊS E ANO FOREM NULOS, CALCULAMOS O MÊS E ANO DO MÊS PASSADO
+            IF P_MES IS NULL OR P_ANO IS NULL THEN
+                SELECT EXTRACT(MONTH FROM CURRENT_DATE), EXTRACT(YEAR FROM CURRENT_DATE)
+                INTO V_MES, V_ANO;
+            ELSE
+                V_MES := P_MES;
+                V_ANO := P_ANO;
+            END IF;
+
+            -- CALCULA A QUANTIDADE DE DIAS NO MÊS ESCOLHIDO
+            SELECT EXTRACT(DAY FROM (DATE_TRUNC('MONTH', TO_DATE(V_ANO || '-' || V_MES || '-01', 'YYYY-MM-DD') + INTERVAL '1 MONTH') - INTERVAL '1 DAY'))
+            INTO V_DIAS_NO_MES;
+            RETURN QUERY
+            SELECT DIAS.OCUPACAO, DIAS.NO_PROFISSIONAL,
+                COUNT(*) FILTER (WHERE DIA = 1) AS "_1",
+                COUNT(*) FILTER (WHERE DIA = 2) AS "_2",
+                COUNT(*) FILTER (WHERE DIA = 3) AS "_3",
+                COUNT(*) FILTER (WHERE DIA = 4) AS "_4",
+                COUNT(*) FILTER (WHERE DIA = 5) AS "_5",
+                COUNT(*) FILTER (WHERE DIA = 6) AS "_6",
+                COUNT(*) FILTER (WHERE DIA = 7) AS "_7",
+                COUNT(*) FILTER (WHERE DIA = 8) AS "_8",
+                COUNT(*) FILTER (WHERE DIA = 9) AS "_9",
+                COUNT(*) FILTER (WHERE DIA = 10) AS "_10",
+                COUNT(*) FILTER (WHERE DIA = 11) AS "_11",
+                COUNT(*) FILTER (WHERE DIA = 12) AS "_12",
+                COUNT(*) FILTER (WHERE DIA = 13) AS "_13",
+                COUNT(*) FILTER (WHERE DIA = 14) AS "_14",
+                COUNT(*) FILTER (WHERE DIA = 15) AS "_15",
+                COUNT(*) FILTER (WHERE DIA = 16) AS "_16",
+                COUNT(*) FILTER (WHERE DIA = 17) AS "_17",
+                COUNT(*) FILTER (WHERE DIA = 18) AS "_18",
+                COUNT(*) FILTER (WHERE DIA = 19) AS "_19",
+                COUNT(*) FILTER (WHERE DIA = 20) AS "_20",
+                COUNT(*) FILTER (WHERE DIA = 21) AS "_21",
+                COUNT(*) FILTER (WHERE DIA = 22) AS "_22",
+                COUNT(*) FILTER (WHERE DIA = 23) AS "_23",
+                COUNT(*) FILTER (WHERE DIA = 24) AS "_24",
+                COUNT(*) FILTER (WHERE DIA = 25) AS "_25",
+                COUNT(*) FILTER (WHERE DIA = 26) AS "_26",
+                COUNT(*) FILTER (WHERE DIA = 27) AS "_27",
+                COUNT(*) FILTER (WHERE DIA = 28) AS "_28",
+                CASE WHEN V_DIAS_NO_MES >= 29 THEN COUNT(*) FILTER (WHERE DIA = 29) ELSE NULL END AS "_29",
+                CASE WHEN V_DIAS_NO_MES >= 30 THEN COUNT(*) FILTER (WHERE DIA = 30) ELSE NULL END AS "_30",
+                CASE WHEN V_DIAS_NO_MES = 31 THEN COUNT(*) FILTER (WHERE DIA = 31) ELSE NULL END AS "_31",
+                COUNT(*) AS TOTAL
+            FROM (
+                SELECT TDC.NO_CBO AS OCUPACAO, TDP.NO_PROFISSIONAL, 
+                    EXTRACT(DAY FROM TO_DATE(TFAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) AS DIA
+                FROM TB_FAT_ATENDIMENTO_INDIVIDUAL TFAI 
+                INNER JOIN TB_DIM_PROFISSIONAL TDP ON TDP.CO_SEQ_DIM_PROFISSIONAL = TFAI.CO_DIM_PROFISSIONAL_1
+                INNER JOIN TB_DIM_EQUIPE TDE ON TDE.CO_SEQ_DIM_EQUIPE = TFAI.CO_DIM_EQUIPE_1
+                INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = TFAI.CO_DIM_CBO_1  
+                WHERE
+                TDE.NU_INE IN (SELECT 
+                    TB_EQUIPE.NU_INE AS INE			
+                    FROM TB_EQUIPE
+                    LEFT JOIN TB_TIPO_EQUIPE  ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
+                    LEFT JOIN TB_DIM_EQUIPE TDE1 ON TDE1.NU_INE = TB_EQUIPE.NU_INE 
+                    WHERE ST_ATIVO = 1 AND NU_MS = '72' 
+                    ORDER BY TB_EQUIPE.NO_EQUIPE)	
+                AND TDP.ST_REGISTRO_VALIDO = 1 
+                AND TFAI.CO_DIM_TEMPO >= '20240101'
+                AND (P_EQUIPE IS NULL OR TDE.NU_INE = P_EQUIPE)
+                AND (P_MES IS NULL OR EXTRACT(MONTH FROM TO_DATE(TFAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) = V_MES)
+                AND (P_ANO IS NULL OR EXTRACT(YEAR FROM TO_DATE(TFAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) = V_ANO)
+            ) AS DIAS
+            GROUP BY DIAS.OCUPACAO, DIAS.NO_PROFISSIONAL;
+        END;
+        $$;`
+    },
+
+    /*--------------------------------------------------------*/ 
     /*-----------------HIPERTENSOS---------------------------*/
     {
         name: 'HAS Clinico',
@@ -2870,20 +2994,18 @@ const functions = [
     /*------------FUNÇÕES AUXILIARES -----------------------------*/
     {
         name: 'Listar INE Escolas',
-        definition: `create or replace function inep_escolas ()
-                returns table(
-                    inep varchar,
-                    escola varchar)
-                language plpgsql
-                as $$
-                begin
-                    return query
-                    select nu_identificador,
-                    no_estabelecimento
-                    from tb_dim_inep tdi 
-                    where no_estabelecimento notnull and nu_identificador <> '-';	
-                end;
-                $$`    
+        definition: `CREATE OR REPLACE FUNCTION LISTAR_INEP()
+        RETURNS TABLE(
+            INEP VARCHAR)
+        LANGUAGE PLPGSQL
+        AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT NU_IDENTIFICADOR
+            FROM TB_DIM_INEP TDI 
+            WHERE NO_ESTABELECIMENTO NOTNULL AND NU_IDENTIFICADOR <> '-';	
+        END;
+        $$`    
     },
 
     {
@@ -2928,22 +3050,42 @@ const functions = [
 
     {
         name: 'Lista ESF',
-        definition: `create or replace function listar_esf()
-            returns table (ine varchar, nomeequipe varchar)
-            language plpgsql
-            as $$
-            begin
-                return query
-                select 
-                    nu_ine,
-                    no_equipe
-                from tb_equipe
-                left join tb_tipo_equipe on tp_equipe = co_seq_tipo_equipe
-                where st_ativo = 1 and nu_ms = '70' 
-                order by no_equipe;
-            end;
-            $$`
+        definition: `CREATE OR REPLACE FUNCTION LISTAR_ESF()
+        RETURNS TABLE (INE VARCHAR, NOMEEQUIPE VARCHAR)
+        LANGUAGE PLPGSQL
+        AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT DISTINCT
+                NU_INE,
+                NO_EQUIPE
+            FROM TB_EQUIPE
+            LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
+            WHERE ST_ATIVO = 1 AND NU_MS = '70' 
+            ORDER BY NO_EQUIPE;
+        END;
+        $$`
     },
+
+    {
+        name: 'Lista eMulti',
+        definition: `CREATE OR REPLACE FUNCTION LISTAR_EMULTI()
+        RETURNS TABLE (INE VARCHAR, NOMEEQUIPE VARCHAR)
+        LANGUAGE PLPGSQL
+        AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT DISTINCT
+                NU_INE,
+                NO_EQUIPE
+            FROM TB_EQUIPE
+            LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
+            WHERE ST_ATIVO = 1 AND NU_MS = '72' 
+            ORDER BY NO_EQUIPE;
+        END;
+        $$`
+    },
+
 
     {
         name: 'Lista Unidade de Saúde',
@@ -2964,24 +3106,26 @@ const functions = [
 
     {
         name: 'Lista Profissionais',
-        definition: `create or replace function getcategorias()
-    returns table(codigo bigint, nome text)
-    language plpgsql
-    as $$
-    begin
-        return query
-        select tdc.co_seq_dim_cbo as codigo,
-        case 
-            when no_cbo = 'ENFERMEIRO DA ESTRATÉGIA DE SAÚDE DA FAMÍLIA' then 'ENFERMEIRO ESF'
-            when no_cbo = 'MÉDICO DA ESTRATÉGIA DE SAÚDE DA FAMÍLIA' then 'MÉDICO ESF'
-            when no_cbo = 'MÉDICO CLÍNICO' then 'MÉDICO CLÍNICO'
-            when no_cbo = 'ENFERMEIRO' then 'ENFERMEIRO'
-        end as nome
-        from tb_dim_cbo tdc 
-        where nu_cbo in ('225142', '223565') and tdc.st_registro_valido = 1
-        order by co_seq_dim_cbo;
-    end;
-    $$`
+        definition: `CREATE OR REPLACE FUNCTION GETCATEGORIAS() 
+            RETURNS TABLE(CODIGO BIGINT, NOME TEXT)
+            LANGUAGE PLPGSQL
+            AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT TDC.CO_SEQ_DIM_CBO AS CODIGO,
+                    CASE 
+                        WHEN NO_CBO = 'ENFERMEIRO DA ESTRATÉGIA DE SAÚDE DA FAMÍLIA' THEN 'ENFERMEIRO ESF'
+                        WHEN NO_CBO = 'MÉDICO DA ESTRATÉGIA DE SAÚDE DA FAMÍLIA' THEN 'MÉDICO ESF'           
+                    END AS NOME
+                FROM TB_DIM_CBO TDC 
+                WHERE CO_SEQ_DIM_CBO IN (
+                    SELECT CO_SEQ_DIM_CBO FROM TB_DIM_CBO 
+                    WHERE NU_CBO IN ('225142', '223565')
+                ) 
+                AND TDC.ST_REGISTRO_VALIDO = 1 
+                ORDER BY CO_SEQ_DIM_CBO;
+            END;
+            $$`
     }
 ];
 

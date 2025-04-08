@@ -27,15 +27,6 @@ atencaobasica.get('/idosos_65_anos_mais', async (req, res) => {
   res.status(200).send(result);
 })
 
-atencaobasica.get('/bolsa_familia', async (req, res) => {
-  let { equipe } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  const result = await new apsRepository().bolsa_familia(equipe);
-  res.status(200).send(result);
-})
-
 atencaobasica.get('/registro_diario_aps', async (req, res) => {
   let { categoria, mes, ano } = req.query;
   if (!categoria) {
@@ -112,20 +103,6 @@ atencaobasica.get('/calcular_pse', async(req, res) => {
   res.status(200).send(result);
 })
 
-atencaobasica.get('/resumo_pbf', async (req, res) => {
-  let {equipe} = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  const result = await new apsRepository().resumoPbf(equipe);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/total_duplicados', async(req, res) => {
-  const result = await new apsRepository().totalDuplicados();
-  res.status(200).send(result);
-})
-
 atencaobasica.get('/dimensao_vinculo', async (req, res) => {
   let {quadrimestre, equipe} = req.query
    // Verifique se todos os parâmetros estão definidos
@@ -161,6 +138,59 @@ atencaobasica.get('/ranking_cadastro', async (req, res) => {
 atencaobasica.get('/lista_duplicados', async(req, res) => {
   const result = await new apsRepository().listaDuplicados();
   res.status(200).send(result);
+})
+
+// LISTAR FCI SEM CNS E CPF
+atencaobasica.get(`/listar_sem_documento`, async(req, res) => {
+  let {equipe} = req.query;
+  if (!equipe){
+    equipe = null;
+  }  
+  const result = await new apsRepository().fciSemDocumento(equipe);
+  res.status(200).send(result);
+})
+
+atencaobasica.get('/fci_desatualizadas', async(req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe = null;
+  }  
+  const result = await new apsRepository().fciDesatualizada(equipe);
+  res.status(200).send(result);
+})
+
+atencaobasica.get('/cidadao_sem_fcdt', async (req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe =null;    
+  }
+  const result = await new apsRepository().cidadaoSemFcdt(equipe);
+  res.status(200).send(result);
+});
+
+atencaobasica.get('/cidadao_sem_fci', async (req, res) => {
+  let {equipe} = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  const result = await new apsRepository().cidadaoSemFci(equipe);
+  res.status(200).send(result);
+})
+
+// EMULTI
+atencaobasica.get('/atendimento_emulti', async(req, res) => {
+  let {equipe, mes, ano } = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  if (!mes) {
+    mes = null;
+  }
+  if (!ano) {
+    ano = null;
+  }  
+  const result = await new apsRepository().atendimentoEmulti(equipe, mes, ano);
+  res.status(200).send(result);  
 })
 
 //HIPERTENSOS

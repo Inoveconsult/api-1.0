@@ -40,12 +40,13 @@ class apsRepository extends baseRopository{
     }
   }
 
-  async bolsa_familia(p1) {
+  // INDICADORS EMULTI
+  async atendimentoEmulti(p1, p2, p3) {
     try {
-      const result = await super.getBolsaFamilia('bolsa_familia', p1);
+      const result = await super.getAll('registro_diario_emulti', p1, p2, p3);
       return result;
     } catch (error) {
-      throw error;      
+      throw error;
     }
   }
 
@@ -103,25 +104,9 @@ class apsRepository extends baseRopository{
         throw error;
       }
     }
-
-    async resumoPbf(p1) {
-      try {
-        const result = await super.getBolsaFamilia('resumo_pbf', p1)
-        return result
-      } catch (error) {
-        throw error;
-      }
-    }
     
     // CADASTROS DUPLICADOS
-    async totalDuplicados(){
-      try {
-        const result = await super.getTotalDuplicados('listar_duplicados');
-        return result;
-      } catch (error) {
-        throw error;
-      }
-    }
+
 
     async listaDuplicados(){
       try {
@@ -131,6 +116,47 @@ class apsRepository extends baseRopository{
         throw error;
       }
     }
+
+    // FCI SEM CPF E CNS
+    async fciSemDocumento(p1) {
+      try {
+        const result = await super.getDimVinculo('fci_sem_documento', p1);
+        return result;
+      } catch (error) {
+        throw(error);
+      }
+    }
+
+    // FCI DESATUALIZADAS
+    async fciDesatualizada(p1){
+      try {
+        const result = await super.getDimVinculo('fci_desatualizada', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // CIDADÃO SEM FCDT
+    async cidadaoSemFcdt(p1) {
+      try {
+        const result = await super.getDimVinculo('cidadao_sem_fcdt', p1);
+        return result;
+      } catch (error) {
+        throw(error);
+      }
+    };
+
+    // CIDADÃO SEM FCI
+    async cidadaoSemFci (p1) {
+      try {
+        const result = await super.getDimVinculo('cidadao_sem_fci', p1);
+        return result;        
+      } catch (error) {
+        throw(error);
+      }
+    };
+
 
 
 

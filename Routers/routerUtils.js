@@ -34,4 +34,9 @@ utilitarios.get('/listar_inep', async(req, res) => {
   res.status(200).send(result);
 })
 
+utilitarios.get('/listar_emulti', async(req, res) => {
+  const result = await new utilsRepository().listarEmulti();
+  res.status(200).send(result);
+})
+
 export default utilitarios;

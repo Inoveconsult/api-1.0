@@ -259,7 +259,7 @@ odontologia.get('/atendimento_diario', async (req, res) => {
   res.status(200).send(result);
 })
 /*----PRE-NATAL ODONTOLOGICO----*/
-odontologia.get('/gestante_atendidas', async (req, res) => {
+odontologia.get('/gestantes_atendidas', async (req, res) => {
   const result = await new odontoRepository().atendimentoGestante();
   res.status(200).send(result);
 })

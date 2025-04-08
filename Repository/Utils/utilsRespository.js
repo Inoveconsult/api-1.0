@@ -49,7 +49,16 @@ class utilsRepository extends baseRopository{
 
   async listarInep() {
     try {
-      const result = await super.getSemParametro('inep_escolas');
+      const result = await super.getSemParametro('listar_inep');
+        return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async listarEmulti (){
+    try {
+      const result = await super.getSemParametro('listar_emulti');
         return result;
     } catch (error) {
       throw error;

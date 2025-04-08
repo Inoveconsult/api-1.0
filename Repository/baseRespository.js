@@ -73,23 +73,15 @@ class baseRopository {
     }
   }
 
-  async getBolsaFamilia(funcao, p1) {
-    try {
-      const result = (await pool.query(`SELECT * FROM ${funcao}($1)`, [p1])).rows;
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  }
   // /CADASTROS DUPLICADOS/ 
-  async getTotalDuplicados(funcao) {
-    try {
-      const result = (await pool.query(`SELECT DISTINCT DUPLICADOS FROM ${funcao}()`)).rows;
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  }
+  // async getTotalDuplicados(funcao) {
+  //   try {
+  //     const result = (await pool.query(`SELECT DISTINCT DUPLICADOS FROM ${funcao}()`)).rows;
+  //     return result;
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
   // LISTA CADASTROS DUPLICADOS 
   async getListarDuplicados(funcao) {
     try {
@@ -100,6 +92,7 @@ class baseRopository {
     }
   }
 
+   // /DIMENSÃO VINCULO/ 
   async getDimensaoVinculo(funcao, p1, p2) {
     const result = (await pool.query(`
         SELECT 
@@ -127,9 +120,16 @@ class baseRopository {
     return result;
   }
 
+  async getDimVinculo(funcao, p1) {
+    try {
+      const result = (await pool.query(`SELECT * FROM ${funcao}($1)`, [p1])).rows;
+      return result;
+    } catch (error) {
+      throw error
+    }
+  }
+
 };
-
-
 
 
 export default baseRopository;
