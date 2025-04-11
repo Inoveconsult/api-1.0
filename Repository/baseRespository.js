@@ -129,6 +129,35 @@ class baseRopository {
     }
   }
 
+  async getDesatualizadoAcs(funcao, p1, p2) {
+    try {
+      const result = (await pool.query(`SELECT * FROM ${funcao}($1, $2)`, [p1,p2])).rows;
+      return result;
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getListarAcsEquuipe(funcao) {
+   try {
+    const result = (await pool.query(`select	
+                    ine,
+                    equipe_nome,
+                    cod_profissional, 
+                    nome_profissional from ${funcao}() 
+                    group by 
+                      ine, 
+                      equipe_nome, 
+                      cod_profissional,
+                      nome_profissional 
+                    order by equipe_nome asc;`)).rows;
+      return result;
+
+   }catch (error) {    
+    throw(error);
+   }
+  }
+
 };
 
 

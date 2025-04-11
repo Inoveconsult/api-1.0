@@ -128,9 +128,9 @@ class apsRepository extends baseRopository{
     }
 
     // FCI DESATUALIZADAS
-    async fciDesatualizada(p1){
+    async fciDesatualizada(p1, p2){
       try {
-        const result = await super.getDimVinculo('fci_desatualizada', p1);
+        const result = await super.getDesatualizadoAcs('fci_desatualizada', p1, p2);
         return result;
       } catch (error) {
         throw error;
@@ -157,7 +157,14 @@ class apsRepository extends baseRopository{
       }
     };
 
-
+    async getListarAcsEquuipe() {
+      try {
+        const result = await super.getListarAcsEquuipe('fci_desatualizada');
+        return result;
+      } catch (error) {
+        throw(error)
+      }
+    }
 
 
     //HIPERTENSOS

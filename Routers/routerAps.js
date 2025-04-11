@@ -151,11 +151,15 @@ atencaobasica.get(`/listar_sem_documento`, async(req, res) => {
 })
 
 atencaobasica.get('/fci_desatualizadas', async(req, res) => {
-  let {equipe} = req.query;
-  if (!equipe) {
+  let { equipe, profissional } = req.query;
+  if (!equipe || equipe === "") {
     equipe = null;
-  }  
-  const result = await new apsRepository().fciDesatualizada(equipe);
+  }
+
+  if (!profissional || profissional === "") {
+    profissional = null;
+  }
+  const result = await new apsRepository().fciDesatualizada(equipe, profissional);
   res.status(200).send(result);
 })
 
@@ -163,7 +167,7 @@ atencaobasica.get('/cidadao_sem_fcdt', async (req, res) => {
   let {equipe} = req.query;
   if (!equipe) {
     equipe =null;    
-  }
+  }  
   const result = await new apsRepository().cidadaoSemFcdt(equipe);
   res.status(200).send(result);
 });
@@ -174,6 +178,11 @@ atencaobasica.get('/cidadao_sem_fci', async (req, res) => {
     equipe = null;
   }
   const result = await new apsRepository().cidadaoSemFci(equipe);
+  res.status(200).send(result);
+})
+
+atencaobasica.get('/listar_acs_equipe', async (req, res) => {
+  const result = await new apsRepository().getListarAcsEquuipe();  
   res.status(200).send(result);
 })
 

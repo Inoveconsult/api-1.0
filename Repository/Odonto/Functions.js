@@ -1597,55 +1597,83 @@ const functions = [
 
     {
         name:'FCI DESATUALIZADAS',
-        definition: `CREATE OR REPLACE FUNCTION FCI_DESATUALIZADA (
-            P_EQUIPE VARCHAR DEFAULT NULL)
-        RETURNS TABLE(
-            NOME VARCHAR,
-            DATA_NASC VARCHAR, 
-            SEXO VARCHAR, 
-            CPF VARCHAR,
-            CNS VARCHAR,
-            ULTIMA_ATUALIZACAO VARCHAR,
-            INE VARCHAR, 
-            EQUIPE VARCHAR, 
-            MICROAREA VARCHAR,
-            TIPO_CADASTRO VARCHAR)
-        AS $$
-        BEGIN
-            RETURN QUERY
-                SELECT 
-                NO_CIDADAO AS NOME,
-                TO_CHAR(DT_NASCIMENTO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS DATA_NASC,
-                NO_SEXO_CIDADAO AS SEXO,
-                CASE
-                    WHEN NU_CPF_CIDADAO IS NULL THEN '****'
-                    ELSE NU_CPF_CIDADAO 
-                END AS CPF,
-                
-                CASE 
-                    WHEN NU_CNS_CIDADAO IS NULL THEN '****'
-                    ELSE NU_CNS_CIDADAO
-                END AS CNS,
-                TO_CHAR(DT_ULTIMA_ATUALIZACAO_CIDADAO, 'DD/MM/YYYY')::VARCHAR AS ULTIMA_ATUALIZACAO,
-                NU_INE_VINC_EQUIPE AS INE,
-                NO_EQUIPE_VINC_EQUIPE AS NOME_EQUIPE,	
-                CASE
-                    WHEN NU_MICRO_AREA_DOMICILIO  IS not NULL THEN NU_MICRO_AREA_DOMICILIO 
-                    ELSE '****' 
-                END AS MICRO_AREA,
-                CASE 
-                    WHEN ST_POSSUI_FCI = 1 THEN 'FCI'
-                    ELSE 'CC'
-                END::VARCHAR AS TIPO_CADASTRO
-            FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-            WHERE
-                (NU_CNS_CIDADAO IS NOT NULL OR NU_CPF_CIDADAO IS NOT NULL)
-                AND ST_POSSUI_FCI = 1
-                AND	DT_ULTIMA_ATUALIZACAO_CIDADAO < (CURRENT_DATE - INTERVAL '24 MONTHS')
-                AND (P_EQUIPE IS NULL OR NU_INE_VINC_EQUIPE = P_EQUIPE)
-            ORDER BY NOME ASC;
-        END;
-        $$ LANGUAGE PLPGSQL;`
+        definition: `CREATE OR REPLACE FUNCTION FCI_DESATUALIZADA ( 
+	EQUIPE VARCHAR DEFAULT null,
+	PROFISSIONAL VARCHAR DEFAULT NULL)
+RETURNS TABLE(
+	ine varchar,
+  	equipe_nome varchar,
+    nome varchar,
+    cns varchar,
+    cpf varchar,
+    dt_nascimento varchar,
+    fci_ultima_atualizacao varchar,
+    fcdt_ultima_atualizacao VARCHAR,
+    micro_area varchar,
+    cod_profissional varchar,
+    cns_profissional varchar,
+    nome_profissional varchar,
+    dias_sem_atualizar integer)
+AS $$
+BEGIN
+	RETURN QUERY
+		WITH profissionais_ativos AS (
+		    SELECT 
+		        co_seq_dim_profissional,
+		        nu_cns,
+		        no_profissional
+		    FROM tb_dim_profissional
+		    WHERE st_registro_valido = 1
+		),
+		cadastros_individuais AS (
+		    SELECT 
+				nu_uuid_ficha,
+				co_dim_profissional, 
+				nu_micro_area,
+				co_dim_tempo, 
+				tde.nu_ine,
+				tde.no_equipe 
+			FROM tb_fat_cad_individual tfci
+			INNER JOIN tb_dim_equipe tde ON tfci.co_dim_equipe = tde.co_seq_dim_equipe
+		),
+		cidadaos_acompanhados AS (
+		    SELECT 
+		        co_unico_ultima_ficha,
+		        no_cidadao,
+		        nu_cns_cidadao,
+		        nu_cpf_cidadao, 
+		        dt_nascimento_cidadao,
+		        dt_ultima_atualizacao_cidadao,
+		        dt_atualizacao_fcd 
+		    FROM tb_acomp_cidadaos_vinculados
+		)
+		SELECT 
+		    ci.nu_ine,
+			ci.no_equipe,
+		    cac.no_cidadao,
+		    cac.nu_cns_cidadao,
+		    cac.nu_cpf_cidadao, 
+		    to_char(to_date(cac.dt_nascimento_cidadao::text, 'YYYY-MM-DD'), 'DD/MM/YYYY')::VARCHAR,
+		    to_char(to_date(ci.co_dim_tempo::text, 'YYYYMMDD'), 'DD/MM/YYYY')::VARCHAR,
+		    TO_CHAR(cac.dt_atualizacao_fcd, 'DD/MM/YYYY')::VARCHAR,   
+			ci.nu_micro_area,     
+		    pa.co_seq_dim_profissional::varchar, 
+		    pa.nu_cns AS nu_cns_profissional,
+		    pa.no_profissional,		
+			(current_date - to_date(ci.co_dim_tempo::text, 'YYYYMMDD'))::int AS dias  
+		FROM cidadaos_acompanhados cac
+		INNER JOIN cadastros_individuais ci
+		    ON cac.co_unico_ultima_ficha = ci.nu_uuid_ficha
+		INNER JOIN profissionais_ativos pa
+		    ON ci.co_dim_profissional = pa.co_seq_dim_profissional
+		WHERE
+			to_date(ci.co_dim_tempo::text, 'YYYYMMDD') < (current_date - interval '24 months')
+			AND (EQUIPE IS NULL OR ci.nu_ine = EQUIPE)
+			AND (PROFISSIONAL IS NULL OR pa.co_seq_dim_profissional = CAST(PROFISSIONAL AS INTEGER))
+		    ---AND (PROFISSIONAL IS NULL OR ci.co_dim_profissional = PROFISSIONAL::bigint)
+		ORDER BY nome ASC;
+END;
+$$ LANGUAGE PLPGSQL;`        
     },
 
     {
@@ -3127,6 +3155,8 @@ const functions = [
             END;
             $$`
     }
+
+    
 ];
 
 
