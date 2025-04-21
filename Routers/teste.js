@@ -98,18 +98,6 @@ consultaodonto.get('/consulta_por_ciap', async (req, res) => {
 
 consultaodonto.get('/procedimento_realizado', async (req, res) => {
   const teste = req.query;
-  // console.log(teste)
-  // const {equipe, mes, ano} = req.query;
-  // console.log(equipe, mes, ano);
-  // const equipe = null;
-  // const mes = null;
-  // const ano = 2024;
-  // console.log(equipe, mes, ano);
-  // if(teste){
-  //   const equipe = null;
-  //   const mes = 7;    
-  //   const ano = 2024;    
-  // }
   const query = `select * from odonto_atendimento_procedimento($1,$2,$3)`;
   try {
     const result = await pool.query(query, [null, null, null])
@@ -133,29 +121,6 @@ consultaodonto.get('/total_exodontias', async (req, res) => {
     console.log(erro);
   }
 });
-
-// consultaodonto.get('/procedimento_preventivo', async (req, res) => {
-//   const teste = req.query;
-//   // console.log(teste)
-//   // const {equipe, mes, ano} = req.query;
-//   // console.log(equipe, mes, ano);
-//   const equipe = null;
-//   const mes = 6;
-//   const ano = 2024;
-//   console.log(equipe, mes, ano);
-//   // if(teste){
-//   //   const equipe = null;
-//   //   const mes = 7;    
-//   //   const ano = 2024;    
-//   // }
-//   const query = `select * from odonto_atendimento_procedimento($1,$2,$3)`;
-//   try {
-//     const result = await pool.query(query, [equipe, mes, ano])
-//     res.status(200).json(result.rows);
-//   } catch (erro) {
-//     console.log(erro);
-//   }
-// });
 
 consultaodonto.get('/atendimento_realizado', async (req, res) => {
 

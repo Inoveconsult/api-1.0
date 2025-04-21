@@ -1,0 +1,20 @@
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+.env
+
+# Logs
+*.log
+
+# Docker / Git
+Dockerfile
+.dockerignore
+.git
+.gitignore
+
+# Sistema
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db

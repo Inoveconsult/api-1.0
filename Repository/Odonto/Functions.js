@@ -1211,104 +1211,111 @@ const functions = [
 
     {
         name: 'Cadastro Domiciliar',
-        definition: `create or replace function cadastro_domiciliar(
-        p_profissional varchar default null,
-        p_equipe varchar default null)
-    returns table(georreferenciado bigint, nao_georreferenciado integer, total integer, percetual_georreferenciado numeric,
-                percetual_nao_georreferenciado numeric)
-    language plpgsql
-    as $$
-    begin 
-        return query
-        WITH domicilios_localizados AS (
-        SELECT COUNT(*) AS total_localizados  
-        FROM tb_fat_cad_domiciliar tfcd
-        join tb_cds_domicilio tcd on
-        tcd.co_unico_domicilio = tfcd.nu_uuid_ficha_origem
-        JOIN tb_dim_profissional tdp 
-        ON tdp.co_seq_dim_profissional = tfcd.co_dim_profissional and tdp.st_registro_valido = 1
-        JOIN tb_dim_equipe tde 
-        ON tde.co_seq_dim_equipe = tfcd.co_dim_equipe
-        WHERE tcd.nu_longitude IS NOT NULL -- Domicílios localizados têm longitude (ajustado para a tabela correta)
-        AND tcd.tp_cds_imovel = 1   
-        AND (tfcd.co_dim_tempo_validade > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer	
-        AND tfcd.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer)
-        AND tfcd.co_dim_cbo in (4, 395, 468, 575, 945, 8892)	
-        AND (p_profissional is null or tdp.nu_cns = p_profissional)
-        AND (p_equipe is null or tde.nu_ine = p_equipe)
-        
-    ),
-    domicilios_nao_localizados AS (
-        SELECT COUNT(*) AS total_nao_localizados
-        FROM tb_fat_cad_domiciliar tfcd
-        join tb_cds_domicilio tcd on
-        tcd.co_unico_domicilio = tfcd.nu_uuid_ficha_origem
-        JOIN tb_dim_profissional tdp 
-        ON tdp.co_seq_dim_profissional = tfcd.co_dim_profissional and tdp.st_registro_valido = 1
-        JOIN tb_dim_equipe tde 
-        ON tde.co_seq_dim_equipe = tfcd.co_dim_equipe
-        WHERE tcd.nu_longitude IS NULL -- Domicílios não localizados não têm longitude (ajustado para a tabela correta)	
-        AND tcd.tp_cds_imovel = 1   
-        AND (tfcd.co_dim_tempo_validade > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer	
-        AND tfcd.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer)
-        AND tfcd.co_dim_cbo IN (4, 395, 468, 575, 945)
-        AND (p_profissional IS NULL OR tdp.nu_cns = p_profissional)
-        AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-    )
-    SELECT 
-        dl.total_localizados AS georreferenciados, 
-        dnl.total_nao_localizados::integer AS nao_georreferenciados, 
-        (dl.total_localizados + dnl.total_nao_localizados)::integer AS total_domicilios,
-        -- Calcular percentual de georreferenciados com tratamento para divisão por zero
-        CASE 
-            WHEN (dl.total_localizados + dnl.total_nao_localizados) = 0 THEN 0
-            ELSE ROUND((CAST(dl.total_localizados AS DECIMAL) / (dl.total_localizados + dnl.total_nao_localizados)) * 100, 2)
-        END AS percentual_georreferenciados,
-        -- Calcular percentual de não georreferenciados com tratamento para divisão por zero
-        CASE 
-            WHEN (dl.total_localizados + dnl.total_nao_localizados) = 0 THEN 0
-            ELSE ROUND((CAST(dnl.total_nao_localizados AS DECIMAL) / (dl.total_localizados + dnl.total_nao_localizados)) * 100, 2)
-        END AS percentual_nao_georreferenciados
-    FROM domicilios_localizados dl
-    CROSS JOIN domicilios_nao_localizados dnl;
-    end;
-    $$`
+        definition: `CREATE OR REPLACE FUNCTION CADASTRO_DOMICILIAR(
+            P_PROFISSIONAL VARCHAR DEFAULT NULL,
+            P_EQUIPE VARCHAR DEFAULT NULL)
+        RETURNS TABLE(GEORREFERENCIADO BIGINT, NAO_GEORREFERENCIADO INTEGER, TOTAL INTEGER,
+                    PERCETUAL_GEORREFERENCIADO NUMERIC, PERCETUAL_NAO_GEORREFERENCIADO NUMERIC)
+        LANGUAGE PLPGSQL
+        AS $$
+        BEGIN 
+            RETURN QUERY
+            WITH DOMICILIOS_LOCALIZADOS AS (
+                SELECT 
+                    COUNT(*) AS TOTAL_LOCALIZADOS  
+                FROM TB_FAT_CAD_DOMICILIAR TFCD
+                JOIN TB_CDS_DOMICILIO TCD ON
+                TCD.CO_UNICO_DOMICILIO = TFCD.NU_UUID_FICHA_ORIGEM
+                JOIN TB_DIM_PROFISSIONAL TDP 
+                    ON TDP.CO_SEQ_DIM_PROFISSIONAL = TFCD.CO_DIM_PROFISSIONAL AND TDP.ST_REGISTRO_VALIDO = 1
+                JOIN TB_DIM_EQUIPE TDE 
+                    ON TDE.CO_SEQ_DIM_EQUIPE = TFCD.CO_DIM_EQUIPE
+                WHERE TCD.NU_LONGITUDE IS NOT NULL -- DOMICÍLIOS LOCALIZADOS TÊM LONGITUDE (AJUSTADO PARA A TABELA CORRETA)
+                AND TCD.TP_CDS_IMOVEL = 1   
+                AND (TFCD.CO_DIM_TEMPO_VALIDADE > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER	
+                AND TFCD.CO_DIM_TEMPO <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER)
+                --AND TFCD.CO_DIM_CBO IN (395, 468, 945, 8892)	
+                AND (P_EQUIPE IS NULL OR TDE.NU_INE = P_EQUIPE)
+                AND (P_PROFISSIONAL IS NULL OR TDP.CO_SEQ_DIM_PROFISSIONAL = P_PROFISSIONAL::BIGINT)
+            
+        ),
+        DOMICILIOS_NAO_LOCALIZADOS AS (
+            SELECT 
+                COUNT(*) AS TOTAL_NAO_LOCALIZADOS
+            FROM TB_FAT_CAD_DOMICILIAR TFCD
+            JOIN TB_CDS_DOMICILIO TCD ON
+                TCD.CO_UNICO_DOMICILIO = TFCD.NU_UUID_FICHA_ORIGEM
+            JOIN TB_DIM_PROFISSIONAL TDP 
+            ON TDP.CO_SEQ_DIM_PROFISSIONAL = TFCD.CO_DIM_PROFISSIONAL AND TDP.ST_REGISTRO_VALIDO = 1
+            JOIN TB_DIM_EQUIPE TDE 
+            ON TDE.CO_SEQ_DIM_EQUIPE = TFCD.CO_DIM_EQUIPE
+            WHERE TCD.NU_LONGITUDE IS NULL -- DOMICÍLIOS NÃO LOCALIZADOS NÃO TÊM LONGITUDE (AJUSTADO PARA A TABELA CORRETA)	
+            AND TCD.TP_CDS_IMOVEL = 1   
+            AND (TFCD.CO_DIM_TEMPO_VALIDADE > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER	
+            AND TFCD.CO_DIM_TEMPO <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER)
+            --AND TFCD.CO_DIM_CBO IN (395, 468, 945, 8892)
+            AND (P_EQUIPE IS NULL OR TDE.NU_INE = P_EQUIPE)
+            AND (P_PROFISSIONAL IS NULL OR TFCD.CO_DIM_PROFISSIONAL = P_PROFISSIONAL::BIGINT)
+        )
+        SELECT 
+            DL.TOTAL_LOCALIZADOS AS GEORREFERENCIADOS, 
+            DNL.TOTAL_NAO_LOCALIZADOS::INTEGER AS NAO_GEORREFERENCIADOS, 
+            (DL.TOTAL_LOCALIZADOS + DNL.TOTAL_NAO_LOCALIZADOS)::INTEGER AS TOTAL_DOMICILIOS,
+            -- CALCULAR PERCENTUAL DE GEORREFERENCIADOS COM TRATAMENTO PARA DIVISÃO POR ZERO
+            CASE 
+                WHEN (DL.TOTAL_LOCALIZADOS + DNL.TOTAL_NAO_LOCALIZADOS) = 0 THEN 0
+                ELSE ROUND((CAST(DL.TOTAL_LOCALIZADOS AS DECIMAL) / (DL.TOTAL_LOCALIZADOS + DNL.TOTAL_NAO_LOCALIZADOS)) * 100, 2)
+            END AS PERCENTUAL_GEORREFERENCIADOS,
+            -- CALCULAR PERCENTUAL DE NÃO GEORREFERENCIADOS COM TRATAMENTO PARA DIVISÃO POR ZERO
+            CASE 
+                WHEN (DL.TOTAL_LOCALIZADOS + DNL.TOTAL_NAO_LOCALIZADOS) = 0 THEN 0
+                ELSE ROUND((CAST(DNL.TOTAL_NAO_LOCALIZADOS AS DECIMAL) / (DL.TOTAL_LOCALIZADOS + DNL.TOTAL_NAO_LOCALIZADOS)) * 100, 2)
+            END AS PERCENTUAL_NAO_GEORREFERENCIADOS
+        FROM DOMICILIOS_LOCALIZADOS DL
+        CROSS JOIN DOMICILIOS_NAO_LOCALIZADOS DNL;
+        END;
+        $$`
     },
 
     {
         name: 'Geolocalizacao Domiciliar',
-        definition: `create or replace function geolocalizacao_domiciliar(
-        p_profissional varchar default null)
-    returns table(logradouro varchar, num_domicilio varchar, bairro varchar, latitude float8,
-                longitude float8, ultima_atualizacao varchar, cadastro_completo text)
-    language plpgsql
-    as $$
-    begin
-        return query
-            select 		
-            tcd.no_logradouro, 
-            tcd.nu_domicilio, 
-            tcd.no_bairro, 
-            tfcd.nu_latitude, 
-            tfcd.nu_longitude,
-            TO_CHAR(TO_DATE(tfcd.co_dim_tempo::text, 'YYYYMMDD'),'DD/MM/YYYY')::varchar as DT_ATUALIZACAO,
-            case
-                when tcd.st_cadastro_completo = 1 then 'SIM'
-            else 'NÃO'
-            end as cadasto_completo
-            from tb_fat_cad_domiciliar tfcd 
-            join tb_cds_domicilio tcd on
-            tcd.co_unico_domicilio = tfcd.nu_uuid_ficha_origem 
-            join tb_dim_profissional tdp on
-            tdp.co_seq_dim_profissional = tfcd.co_dim_profissional 
-            where 
-                tfcd.nu_latitude is not null
-                and tdp.st_registro_valido = 1
-                and	(tfcd.co_dim_tempo_validade > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer	
-            AND tfcd.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::integer) 
-            and (p_profissional is null or tdp.nu_cns = p_profissional);		
-    end;
-    $$`
+        definition: `CREATE OR REPLACE FUNCTION GEOLOCALIZACAO_DOMICILIAR(
+		P_EQUIPE VARCHAR DEFAULT NULL,
+        P_PROFISSIONAL VARCHAR DEFAULT NULL)
+RETURNS TABLE(INE VARCHAR, COD_PROFISSIONAL INTEGER,LOGRADOURO VARCHAR, NUM_DOMICILIO VARCHAR, 
+			BAIRRO VARCHAR, LATITUDE FLOAT8, LONGITUDE FLOAT8, ULTIMA_ATUALIZACAO VARCHAR, CADASTRO_COMPLETO TEXT)
+LANGUAGE PLPGSQL
+AS $$
+BEGIN
+    RETURN QUERY
+       SELECT	
+     		TDE.NU_INE, 
+     		TDP.CO_SEQ_DIM_PROFISSIONAL::INTEGER, 
+            TCD.NO_LOGRADOURO, 
+            TCD.NU_DOMICILIO, 
+            TCD.NO_BAIRRO, 
+            TFCD.NU_LATITUDE, 
+            TFCD.NU_LONGITUDE,
+            TO_CHAR(TO_DATE(TFCD.CO_DIM_TEMPO::TEXT, 'YYYYMMDD'),'DD/MM/YYYY')::VARCHAR AS DT_ATUALIZACAO,
+            CASE
+                WHEN TCD.ST_CADASTRO_COMPLETO = 1 THEN 'SIM'
+            ELSE 'NÃO'
+            END AS CADASTO_COMPLETO
+        FROM TB_FAT_CAD_DOMICILIAR TFCD 
+        JOIN TB_CDS_DOMICILIO TCD ON
+        TCD.CO_UNICO_DOMICILIO = TFCD.NU_UUID_FICHA_ORIGEM 
+        JOIN TB_DIM_PROFISSIONAL TDP ON
+        TDP.CO_SEQ_DIM_PROFISSIONAL = TFCD.CO_DIM_PROFISSIONAL
+		INNER JOIN TB_DIM_EQUIPE TDE ON TDE.CO_SEQ_DIM_EQUIPE = TFCD.CO_DIM_EQUIPE
+        WHERE 
+        	TFCD.NU_LATITUDE IS NOT NULL
+            AND TDP.ST_REGISTRO_VALIDO = 1
+            AND	(TFCD.CO_DIM_TEMPO_VALIDADE > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER	
+            AND TFCD.CO_DIM_TEMPO <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER) 
+            AND (P_EQUIPE IS NULL OR TDE.NU_INE = P_EQUIPE)
+            AND (P_PROFISSIONAL IS NULL OR TFCD.CO_DIM_PROFISSIONAL = P_PROFISSIONAL::BIGINT);		
+ END;
+ $$`
     },
 
     {
@@ -1353,86 +1360,131 @@ const functions = [
     },
 
     {
-        name:'Calcula PSE',
-        definition:`create or replace function calcula_pse()
-            returns table(
-            QTD_ESCOLAS_ATENDIDAS INTEGER,
-            QTD_ESCOLAS_ACOES_REALIZDAS INTEGER
-            )
-        language PLPGSQL
-        as $$
-        begin
-            RETURN QUERY
-                WITH CTE_ESCOLAS_REGISTRADAS AS (
-                    SELECT COUNT(*) AS TOTAL_ESCOLAS 
-                    FROM (
-                        SELECT ds_filtro_tema_para_saude, 
-                            ds_filtro_pratica_em_saude, 
-                            co_dim_inep, 
-                            co_dim_tempo,
-                            -- ti.ds_inep as inep,			
-                            ROW_NUMBER() OVER (PARTITION BY co_dim_inep ORDER BY co_dim_inep ASC) AS rn
-                        FROM tb_fat_atividade_coletiva tfac
-                        join tb_dim_inep tdi on tdi.co_seq_dim_inep =  tfac.co_dim_inep
-                        WHERE (
-                            ds_filtro_tema_para_saude LIKE '%|1|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|5|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|7|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|13|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|14|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|15|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|16|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|17|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|19|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|29|%' OR
-                            ds_filtro_pratica_em_saude LIKE '%|2|%' OR 
-                            ds_filtro_pratica_em_saude LIKE '%|3|%' OR 
-                            ds_filtro_pratica_em_saude LIKE '%|9|%' OR 
-                            ds_filtro_pratica_em_saude LIKE '%|11|%' OR 
-                            ds_filtro_pratica_em_saude LIKE '%|20|%' OR 
-                            ds_filtro_pratica_em_saude LIKE '%|22|%' OR 
-                            ds_filtro_pratica_em_saude LIKE '%|24|%' OR 
-                            ds_filtro_pratica_em_saude LIKE '%|30|%'
-                        ) 
-                        AND co_dim_tempo >= '20230101' 
-                        AND co_dim_inep IS NOT NULL 
-                        AND co_dim_inep > 1
-                    ) AS escolasregistradapse
-                    WHERE rn = 1
-                ), 
-                CTE_ACOES_REGISTRADAS AS (
-                    SELECT COUNT(*) AS ACOES_ESCOLAS 
-                    FROM (
-                        SELECT ds_filtro_tema_para_saude, 
-                            ds_filtro_pratica_em_saude, 
-                            co_dim_inep, 
-                            co_dim_tempo,
-                            ROW_NUMBER() OVER (PARTITION BY co_dim_inep ORDER BY co_dim_inep ASC) AS rn
-                        FROM tb_fat_atividade_coletiva tfac
-                        join tb_dim_inep tdi on tdi.co_seq_dim_inep =  tfac.co_dim_inep
-                        WHERE (
-                            ds_filtro_tema_para_saude LIKE '%|1|%' OR
-                            (ds_filtro_pratica_em_saude LIKE '%|11|%' OR
-                            ds_filtro_pratica_em_saude LIKE '%|20|%') OR
-                            ds_filtro_tema_para_saude LIKE '%|5|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|13|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|16|%' OR 
-                            ds_filtro_tema_para_saude LIKE '%|17|%'
-                        )				
-                        AND co_dim_tempo >= '20230101' 
-                        AND co_dim_inep IS NOT NULL 
-                        AND co_dim_inep > 1
-                    ) AS ACOESPSE
-                    WHERE rn = 1
-                )
-                SELECT 
-                    CTE_ESCOLAS_REGISTRADAS.TOTAL_ESCOLAS::integer,
-                    CTE_ACOES_REGISTRADAS.ACOES_ESCOLAS::integer
-                FROM 
-                    CTE_ESCOLAS_REGISTRADAS, 
-                    CTE_ACOES_REGISTRADAS;	
-        end;
-        $$`
+        name:'Calcula PSE Novo',
+        definition: `CREATE OR REPLACE FUNCTION PSE_NOVO (
+	P_INEP VARCHAR DEFAULT NULL,
+	P_EQUIPE VARCHAR DEFAULT NULL,
+	P_ANO VARCHAR DEFAULT NULL)
+RETURNS TABLE ( INEP VARCHAR, NOME_ESCOLA VARCHAR, ANO VARCHAR, TOTAL_GERAL BIGINT, QTD_TEMA_SAUDE BIGINT,
+	QTD_PRATICA_SAUDE BIGINT, QTD_ACOES_PRIORITARIAS BIGINT, ALIMENT_SAUDAVEL BIGINT, CIDAN_DIREITOS BIGINT,
+	DROGAS_TABACO BIGINT, VIOLEN_PAZ BIGINT, SAUDE_AMBIENT BIGINT, SAUDE_BUC BIGINT, SAUD_MENTAL BIGINT, SAUD_SEXUAL BIGINT,
+	AGRAVOS_NEGLIG BIGINT, COMBAT_AEDES BIGINT, APP_FLUOR BIGINT, SAUD_OCULAR BIGINT, ESCOVACAO_SUPER BIGINT, ATVID_FISICA BIGINT,
+	ANTROPOMET BIGINT, SAUD_AUDITIVA BIGINT, VACINA BIGINT, PREV_COVID BIGINT)
+LANGUAGE PLPGSQL
+AS $$
+BEGIN
+	RETURN QUERY
+	WITH ATIVIDADES_FILTRADAS AS (
+	    SELECT 
+	        TFAC.CO_DIM_EQUIPE,
+	        TDE.NU_INE,
+	        TDE.NO_EQUIPE,
+	        TDI.NU_IDENTIFICADOR,
+	        TDI.NO_ESTABELECIMENTO, 
+	        TFAC.CO_DIM_INEP,
+	        TFAC.CO_DIM_TEMPO,
+	        LEFT(TFAC.CO_DIM_TEMPO::TEXT, 4)::VARCHAR AS ANO,
+	        DS_FILTRO_TEMA_PARA_SAUDE,
+	        DS_FILTRO_PRATICA_EM_SAUDE,
+	        CASE 
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|1|%' THEN 'ALIMENTACAO SAUDAVEL'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|5|%' THEN 'CIDADANIA E DIREITOS HUMANOS'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|7|%' THEN 'DEPENDENCIA QUIMICA/TABACO/ALCOOL/OUTRAS DROGAS'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|13|%' THEN 'PREVENCAO DA VIOLENCIA E CULTURA DA PAZ'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|14|%' THEN 'SAUDE AMBIENTAL'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|15|%' THEN 'SAUDE BUCAL'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|16|%' THEN 'SAUDE MENTAL'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|17|%' THEN 'SAUDE SEXUAL E REPRODUTIVA'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|19|%' THEN 'AGRAVOS NEGLIGENCIADOS'
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|29|%' THEN 'ACOES DE COMBATE AO AEDES AEGYPTI'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|2|%' THEN 'APLICACAO TOPICA DE FLUOR'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|3|%' THEN 'SAUDE OCULAR'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|9|%' THEN 'ESCOVACAO DENTAL SUPERVISIONADA'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|11|%' THEN 'PRATICAS CORPORAIS E ATIVIDADE FISICA'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|20|%' THEN 'ANTROPOMETRIA'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|22|%' THEN 'SAUDE AUDITIVA'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|24|%' THEN 'VERIFICACAO DE SITUACAO VACINAL'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|30|%' THEN 'PREVENCAO DE COVID NAS ESCOLAS'
+	        END AS ATIVIDADE,
+	        CASE 
+	            WHEN DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|%' THEN 'TEMA'
+	            WHEN DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|%' THEN 'PRATICA'
+	        END AS ORIGEM
+	    FROM TB_FAT_ATIVIDADE_COLETIVA TFAC 
+	    LEFT JOIN TB_DIM_EQUIPE TDE ON TFAC.CO_DIM_EQUIPE = TDE.CO_SEQ_DIM_EQUIPE 
+	    LEFT JOIN TB_DIM_INEP TDI ON TFAC.CO_DIM_INEP = TDI.CO_SEQ_DIM_INEP 
+	    WHERE (
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|1|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|5|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|7|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|13|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|14|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|15|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|16|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|17|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|19|%' OR
+	        DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|29|%' OR
+	        DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|2|%' OR 
+	        DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|3|%' OR 
+	        DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|9|%' OR 
+	        DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|11|%' OR 
+	        DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|20|%' OR 
+	        DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|22|%' OR 
+	        DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|24|%' OR 
+	        DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|30|%'
+	    )
+	    AND TFAC.CO_DIM_INEP <> 1
+	    AND TFAC.CO_DIM_TEMPO >= '20230101'
+	    -- >>>> AQUI ESTÃO OS FILTROS PARAMETRIZÁVEIS <<<<
+	    AND (P_INEP IS NULL OR TDI.NU_IDENTIFICADOR = P_INEP)
+	    AND (P_EQUIPE IS NULL OR TDE.NU_INE = P_EQUIPE)
+	    AND (P_ANO IS NULL OR LEFT(TFAC.CO_DIM_TEMPO::TEXT, 4) = P_ANO)
+	),
+	RESUMO_PIVOTADO AS (
+	    SELECT 
+	        A.NU_IDENTIFICADOR,
+	        A.NO_ESTABELECIMENTO,
+	        --A.NU_INE,
+	        --A.NO_EQUIPE,
+	        A.ANO::VARCHAR,
+	        COUNT(*) AS TOTAL_GERAL,
+	        SUM(CASE WHEN A.ORIGEM = 'TEMA' THEN 1 ELSE 0 END) AS QTDE_TEMA_SAUDE,
+	        SUM(CASE WHEN A.ORIGEM = 'PRATICA' THEN 1 ELSE 0 END) AS QTDE_PRATICA_SAUDE,
+	        SUM(CASE 
+	            WHEN A.DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|1|%' OR
+	                 A.DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|5|%' OR
+	                 A.DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|13|%' OR
+	                 A.DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|16|%' OR
+	                 A.DS_FILTRO_TEMA_PARA_SAUDE LIKE '%|17|%' OR
+	                 A.DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|11|%' OR
+	                 A.DS_FILTRO_PRATICA_EM_SAUDE LIKE '%|20|%' 
+	            THEN 1 ELSE 0 END) AS ACOES_PRIORITARIAS,
+	        -- AQUI ENTRAM AS COLUNAS PIVOTADAS COMO ANTES
+	        SUM(CASE WHEN A.ATIVIDADE = 'ALIMENTACAO SAUDAVEL' THEN 1 ELSE 0 END) AS ALIMENTACAO_SAUDAVEL,
+	        SUM(CASE WHEN A.ATIVIDADE = 'CIDADANIA E DIREITOS HUMANOS' THEN 1 ELSE 0 END) AS CIDADANIA_DIREITOS,
+	        SUM(CASE WHEN A.ATIVIDADE = 'DEPENDENCIA QUIMICA/TABACO/ALCOOL/OUTRAS DROGAS' THEN 1 ELSE 0 END) AS DROGAS,
+	        SUM(CASE WHEN A.ATIVIDADE = 'PREVENCAO DA VIOLENCIA E CULTURA DA PAZ' THEN 1 ELSE 0 END) AS VIOLENCIA_PAZ,
+	        SUM(CASE WHEN A.ATIVIDADE = 'SAUDE AMBIENTAL' THEN 1 ELSE 0 END) AS SAUDE_AMBIENTAL,
+	        SUM(CASE WHEN A.ATIVIDADE = 'SAUDE BUCAL' THEN 1 ELSE 0 END) AS SAUDE_BUCAL,
+	        SUM(CASE WHEN A.ATIVIDADE = 'SAUDE MENTAL' THEN 1 ELSE 0 END) AS SAUDE_MENTAL,
+	        SUM(CASE WHEN A.ATIVIDADE = 'SAUDE SEXUAL E REPRODUTIVA' THEN 1 ELSE 0 END) AS SAUDE_SEXUAL,
+	        SUM(CASE WHEN A.ATIVIDADE = 'AGRAVOS NEGLIGENCIADOS' THEN 1 ELSE 0 END) AS AGRAVOS,
+	        SUM(CASE WHEN A.ATIVIDADE = 'ACOES DE COMBATE AO AEDES AEGYPTI' THEN 1 ELSE 0 END) AS COMBATE_AEDES,
+	        SUM(CASE WHEN A.ATIVIDADE = 'APLICACAO TOPICA DE FLUOR' THEN 1 ELSE 0 END) AS FLUOR,
+	        SUM(CASE WHEN A.ATIVIDADE = 'SAUDE OCULAR' THEN 1 ELSE 0 END) AS SAUDE_OCULAR,
+	        SUM(CASE WHEN A.ATIVIDADE = 'ESCOVACAO DENTAL SUPERVISIONADA' THEN 1 ELSE 0 END) AS ESCOVACAO,
+	        SUM(CASE WHEN A.ATIVIDADE = 'PRATICAS CORPORAIS E ATIVIDADE FISICA' THEN 1 ELSE 0 END) AS ATIVIDADE_FISICA,
+	        SUM(CASE WHEN A.ATIVIDADE = 'ANTROPOMETRIA' THEN 1 ELSE 0 END) AS ANTROPOMETRIA,
+	        SUM(CASE WHEN A.ATIVIDADE = 'SAUDE AUDITIVA' THEN 1 ELSE 0 END) AS SAUDE_AUDITIVA,
+	        SUM(CASE WHEN A.ATIVIDADE = 'VERIFICACAO DE SITUACAO VACINAL' THEN 1 ELSE 0 END) AS VACINACAO,
+	        SUM(CASE WHEN A.ATIVIDADE = 'PREVENCAO DE COVID NAS ESCOLAS' THEN 1 ELSE 0 END) AS COVID
+	    FROM ATIVIDADES_FILTRADAS A
+	    GROUP BY A.NU_IDENTIFICADOR, A.NO_ESTABELECIMENTO, A.ANO
+	)
+	SELECT * FROM RESUMO_PIVOTADO		
+	ORDER BY NU_IDENTIFICADOR;	
+END;
+$$;`
     },
 
     {name:'Listagem Duplicados',
@@ -1592,88 +1644,88 @@ const functions = [
                 AND (P_EQUIPE IS NULL OR NU_INE_VINC_EQUIPE = P_EQUIPE)
             ORDER BY INE ASC;
         END;
-        $$ LANGUAGE PLPGSQL;`
-    },
+            $$ LANGUAGE PLPGSQL;`
+        },
 
-    {
-        name:'FCI DESATUALIZADAS',
-        definition: `CREATE OR REPLACE FUNCTION FCI_DESATUALIZADA ( 
-	EQUIPE VARCHAR DEFAULT null,
-	PROFISSIONAL VARCHAR DEFAULT NULL)
-RETURNS TABLE(
-	ine varchar,
-  	equipe_nome varchar,
-    nome varchar,
-    cns varchar,
-    cpf varchar,
-    dt_nascimento varchar,
-    fci_ultima_atualizacao varchar,
-    fcdt_ultima_atualizacao VARCHAR,
-    micro_area varchar,
-    cod_profissional varchar,
-    cns_profissional varchar,
-    nome_profissional varchar,
-    dias_sem_atualizar integer)
-AS $$
-BEGIN
-	RETURN QUERY
-		WITH profissionais_ativos AS (
-		    SELECT 
-		        co_seq_dim_profissional,
-		        nu_cns,
-		        no_profissional
-		    FROM tb_dim_profissional
-		    WHERE st_registro_valido = 1
-		),
-		cadastros_individuais AS (
-		    SELECT 
-				nu_uuid_ficha,
-				co_dim_profissional, 
-				nu_micro_area,
-				co_dim_tempo, 
-				tde.nu_ine,
-				tde.no_equipe 
-			FROM tb_fat_cad_individual tfci
-			INNER JOIN tb_dim_equipe tde ON tfci.co_dim_equipe = tde.co_seq_dim_equipe
-		),
-		cidadaos_acompanhados AS (
-		    SELECT 
-		        co_unico_ultima_ficha,
-		        no_cidadao,
-		        nu_cns_cidadao,
-		        nu_cpf_cidadao, 
-		        dt_nascimento_cidadao,
-		        dt_ultima_atualizacao_cidadao,
-		        dt_atualizacao_fcd 
-		    FROM tb_acomp_cidadaos_vinculados
-		)
-		SELECT 
-		    ci.nu_ine,
-			ci.no_equipe,
-		    cac.no_cidadao,
-		    cac.nu_cns_cidadao,
-		    cac.nu_cpf_cidadao, 
-		    to_char(to_date(cac.dt_nascimento_cidadao::text, 'YYYY-MM-DD'), 'DD/MM/YYYY')::VARCHAR,
-		    to_char(to_date(ci.co_dim_tempo::text, 'YYYYMMDD'), 'DD/MM/YYYY')::VARCHAR,
-		    TO_CHAR(cac.dt_atualizacao_fcd, 'DD/MM/YYYY')::VARCHAR,   
-			ci.nu_micro_area,     
-		    pa.co_seq_dim_profissional::varchar, 
-		    pa.nu_cns AS nu_cns_profissional,
-		    pa.no_profissional,		
-			(current_date - to_date(ci.co_dim_tempo::text, 'YYYYMMDD'))::int AS dias  
-		FROM cidadaos_acompanhados cac
-		INNER JOIN cadastros_individuais ci
-		    ON cac.co_unico_ultima_ficha = ci.nu_uuid_ficha
-		INNER JOIN profissionais_ativos pa
-		    ON ci.co_dim_profissional = pa.co_seq_dim_profissional
-		WHERE
-			to_date(ci.co_dim_tempo::text, 'YYYYMMDD') < (current_date - interval '24 months')
-			AND (EQUIPE IS NULL OR ci.nu_ine = EQUIPE)
-			AND (PROFISSIONAL IS NULL OR pa.co_seq_dim_profissional = CAST(PROFISSIONAL AS INTEGER))
-		    ---AND (PROFISSIONAL IS NULL OR ci.co_dim_profissional = PROFISSIONAL::bigint)
-		ORDER BY nome ASC;
-END;
-$$ LANGUAGE PLPGSQL;`        
+        {
+            name:'FCI DESATUALIZADAS',
+            definition: `CREATE OR REPLACE FUNCTION FCI_DESATUALIZADA ( 
+                EQUIPE VARCHAR DEFAULT null,
+                PROFISSIONAL VARCHAR DEFAULT NULL)
+            RETURNS TABLE(
+                ine varchar,
+                equipe_nome varchar,
+                nome varchar,
+                cns varchar,
+                cpf varchar,
+                dt_nascimento varchar,
+                fci_ultima_atualizacao varchar,
+                fcdt_ultima_atualizacao VARCHAR,
+                micro_area varchar,
+                cod_profissional varchar,
+                cns_profissional varchar,
+                nome_profissional varchar,
+                dias_sem_atualizar integer)
+            AS $$
+            BEGIN
+                RETURN QUERY
+                    WITH profissionais_ativos AS (
+                        SELECT 
+                            co_seq_dim_profissional,
+                            nu_cns,
+                            no_profissional
+                        FROM tb_dim_profissional
+                        WHERE st_registro_valido = 1
+                    ),
+                    cadastros_individuais AS (
+                        SELECT 
+                            nu_uuid_ficha,
+                            co_dim_profissional, 
+                            nu_micro_area,
+                            co_dim_tempo, 
+                            tde.nu_ine,
+                            tde.no_equipe 
+                        FROM tb_fat_cad_individual tfci
+                        INNER JOIN tb_dim_equipe tde ON tfci.co_dim_equipe = tde.co_seq_dim_equipe
+                    ),
+                    cidadaos_acompanhados AS (
+                        SELECT 
+                            co_unico_ultima_ficha,
+                            no_cidadao,
+                            nu_cns_cidadao,
+                            nu_cpf_cidadao, 
+                            dt_nascimento_cidadao,
+                            dt_ultima_atualizacao_cidadao,
+                            dt_atualizacao_fcd 
+                        FROM tb_acomp_cidadaos_vinculados
+                    )
+                    SELECT 
+                        ci.nu_ine,
+                        ci.no_equipe,
+                        cac.no_cidadao,
+                        cac.nu_cns_cidadao,
+                        cac.nu_cpf_cidadao, 
+                        to_char(to_date(cac.dt_nascimento_cidadao::text, 'YYYY-MM-DD'), 'DD/MM/YYYY')::VARCHAR,
+                        to_char(to_date(ci.co_dim_tempo::text, 'YYYYMMDD'), 'DD/MM/YYYY')::VARCHAR,
+                        TO_CHAR(cac.dt_atualizacao_fcd, 'DD/MM/YYYY')::VARCHAR,   
+                        ci.nu_micro_area,     
+                        pa.co_seq_dim_profissional::varchar, 
+                        pa.nu_cns AS nu_cns_profissional,
+                        pa.no_profissional,		
+                        (current_date - to_date(ci.co_dim_tempo::text, 'YYYYMMDD'))::int AS dias  
+                    FROM cidadaos_acompanhados cac
+                    INNER JOIN cadastros_individuais ci
+                        ON cac.co_unico_ultima_ficha = ci.nu_uuid_ficha
+                    INNER JOIN profissionais_ativos pa
+                        ON ci.co_dim_profissional = pa.co_seq_dim_profissional
+                    WHERE
+                        to_date(ci.co_dim_tempo::text, 'YYYYMMDD') < (current_date - interval '24 months')
+                        AND (EQUIPE IS NULL OR ci.nu_ine = EQUIPE)
+                        AND (PROFISSIONAL IS NULL OR pa.co_seq_dim_profissional = CAST(PROFISSIONAL AS INTEGER))
+                        ---AND (PROFISSIONAL IS NULL OR ci.co_dim_profissional = PROFISSIONAL::bigint)
+                    ORDER BY nome ASC;
+            END;
+            $$ LANGUAGE PLPGSQL;`        
     },
 
     {
@@ -3023,17 +3075,20 @@ $$ LANGUAGE PLPGSQL;`
     {
         name: 'Listar INE Escolas',
         definition: `CREATE OR REPLACE FUNCTION LISTAR_INEP()
-        RETURNS TABLE(
-            INEP VARCHAR)
-        LANGUAGE PLPGSQL
-        AS $$
-        BEGIN
-            RETURN QUERY
-            SELECT NU_IDENTIFICADOR
-            FROM TB_DIM_INEP TDI 
-            WHERE NO_ESTABELECIMENTO NOTNULL AND NU_IDENTIFICADOR <> '-';	
-        END;
-        $$`    
+            RETURNS TABLE(
+                INEP VARCHAR, 
+                NOME VARCHAR)
+            LANGUAGE PLPGSQL
+            AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT 
+                    NU_IDENTIFICADOR,
+                    NO_ESTABELECIMENTO
+                FROM TB_DIM_INEP TDI 
+                WHERE NO_ESTABELECIMENTO NOTNULL AND NU_IDENTIFICADOR <> '-';	
+            END;
+            $$`    
     },
 
     {

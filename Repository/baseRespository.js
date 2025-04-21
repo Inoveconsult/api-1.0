@@ -73,15 +73,6 @@ class baseRopository {
     }
   }
 
-  // /CADASTROS DUPLICADOS/ 
-  // async getTotalDuplicados(funcao) {
-  //   try {
-  //     const result = (await pool.query(`SELECT DISTINCT DUPLICADOS FROM ${funcao}()`)).rows;
-  //     return result;
-  //   } catch (error) {
-  //     throw error;
-  //   }
-  // }
   // LISTA CADASTROS DUPLICADOS 
   async getListarDuplicados(funcao) {
     try {

@@ -58,23 +58,26 @@ atencaobasica.get('/visita_domiciliar', async (req, res) => {
 })
 
 atencaobasica.get('/cadastro_domiciliar', async (req, res) => {
-  let { profissional, equipe } = req.query;
-  if (!profissional) {
-    profissional = null;
-  }
+  let {equipe, profissional } = req.query;
   if (!equipe) {
     equipe = null;
   }
-  const result = await new apsRepository().cadastroDomiciliar(profissional, equipe);
+  if (!profissional) {
+    profissional = null;
+  }
+  const result = await new apsRepository().cadastroDomiciliar(equipe, profissional);  
   res.status(200).send(result);
 })
 
 atencaobasica.get('/geolocalizacao_domiciliar', async (req, res) => {
-  let { profissional } = req.query;
+  let { equipe, profissional } = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
   if (!profissional) {
     profissional = null;
   }
-  const result = await new apsRepository().geolocalizacaoDomiciliar(profissional);
+  const result = await new apsRepository().geolocalizacaoDomiciliar(equipe, profissional);
   res.status(200).send(result);
 })
 
@@ -86,8 +89,7 @@ atencaobasica.get('/calcular_iaf', async (req, res) => {
     }
     if (!Array.isArray(cnes)) {
       cnes = []; // Caso cnes não seja enviado ou seja inválido, inicializa como array vazio
-    }
-    
+    }    
   if (!mes) {
     mes = null;
   }
@@ -95,11 +97,6 @@ atencaobasica.get('/calcular_iaf', async (req, res) => {
     ano = null;
   }
   const result = await new apsRepository().calcularIaf(cnes, mes, ano);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/calcular_pse', async(req, res) => {
-  const result = await new apsRepository().calcularPse();
   res.status(200).send(result);
 })
 
@@ -118,6 +115,7 @@ atencaobasica.get('/dimensao_vinculo', async (req, res) => {
   }  
 })
 
+
 atencaobasica.get('/ranking_cadastro', async (req, res) => {
   let {quadrimestre, equipe} = req.query
    // Verifique se todos os parâmetros estão definidos
@@ -134,6 +132,21 @@ atencaobasica.get('/ranking_cadastro', async (req, res) => {
   }  
 })
 
+atencaobasica.get('/pse_novo', async(req, res) => {
+  let {inep, equipe, ano } = req.query;
+  if (!inep) {
+    inep = null;
+  }
+  if (!equipe) {
+    equipe = null;    
+  }
+  if (!ano) {
+    ano = null;  
+  }  
+  const result = await new apsRepository().pseNovo(inep, equipe, ano);
+  res.status(200).send(result);
+  // console.log(result)
+})
 
 atencaobasica.get('/lista_duplicados', async(req, res) => {
   const result = await new apsRepository().listaDuplicados();

@@ -72,15 +72,15 @@ class apsRepository extends baseRopository{
     async cadastroDomiciliar(p1, p2) {
       try {
         const result = await super.getMensal('cadastro_domiciliar', p1, p2);
-        return result;
+        return result;        
       } catch (error) {
         throw error;
       }
     }
 
-    async geolocalizacaoDomiciliar(p1) {
+    async geolocalizacaoDomiciliar(p1, p2) {
       try {
-        const result = await super.getParametroEquipe('geolocalizacao_domiciliar', p1);
+        const result = await super.getMensal('geolocalizacao_domiciliar', p1, p2);
         return result;
       } catch (error) {
         throw error;
@@ -96,12 +96,12 @@ class apsRepository extends baseRopository{
       }
     }
 
-    async calcularPse() {
+    async pseNovo(p1, p2, p3){
       try {
-        const result = await super.getSemParametro('calcula_pse');
-        return result;
+        const result = await super.getAll('pse_novo', p1, p2, p3);
+        return result;        
       } catch (error) {
-        throw error;
+        
       }
     }
     
