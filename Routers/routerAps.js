@@ -1,31 +1,13 @@
 import { Router } from "express";
+import { authenticateToken } from "../Middleware/authMiddleware.js";
+import { normalizarDataParaFormatoBanco } from "../Repository/Utils/functionNormalizarData.js";
 import apsRepository from "../Repository/aps/apsRepository.js";
+
 
 const atencaobasica = Router();
 
-atencaobasica.get('/crianca_ate_5_anos', async (req, res) => {
-  let { equipe, data } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  if (!data) {
-    data = null;
-  }
-  const result = await new apsRepository().criancaCincoAnos(equipe, data);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/idosos_65_anos_mais', async (req, res) => {
-  let { equipe, data } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  if (!data) {
-    data = null;
-  }
-  const result = await new apsRepository().idosos(equipe, data);
-  res.status(200).send(result);
-})
+atencaobasica.use(authenticateToken);
+console.log(authenticateToken)
 
 atencaobasica.get('/registro_diario_aps', async (req, res) => {
   let { categoria, mes, ano } = req.query;
@@ -152,6 +134,30 @@ atencaobasica.get('/lista_duplicados', async(req, res) => {
   const result = await new apsRepository().listaDuplicados();
   res.status(200).send(result);
 })
+// IVCF-20 
+atencaobasica.get('/resumo_ivcf', async (req, res) => {
+  let equipe =  req.query.equipe;
+  let quadrimestre = req.query.quadrimestre;
+
+    // Transforma os parâmetros
+  const ineArray = equipe
+    ? equipe.split(',').map(ine => ine.trim())
+    : null;    
+  const result = await new apsRepository().indicadorIVCF20(quadrimestre, ineArray);
+  res.status(200).send(result);
+})
+
+atencaobasica.get('/listar_ivcf', async (req, res) => {
+  let {quadrimestre, equipe} = req.query;
+
+  if (!equipe) {
+    equipe = null;
+  }
+  const result = await new apsRepository().listarIVCF20(quadrimestre, equipe);
+  res.status(200).send(result);
+})
+
+// ------------------------------------ //
 
 // LISTAR FCI SEM CNS E CPF
 atencaobasica.get(`/listar_sem_documento`, async(req, res) => {
@@ -164,7 +170,11 @@ atencaobasica.get(`/listar_sem_documento`, async(req, res) => {
 })
 
 atencaobasica.get('/fci_desatualizadas', async(req, res) => {
-  let { equipe, profissional } = req.query;
+   let { quadrimestre, equipe = null, profissional = null } = req.query;
+
+  if (!quadrimestre) {
+      return res.status(400).send({ error: 'Parâmetro "quadrimestre" é obrigatório.' });
+  }
   if (!equipe || equipe === "") {
     equipe = null;
   }
@@ -172,7 +182,10 @@ atencaobasica.get('/fci_desatualizadas', async(req, res) => {
   if (!profissional || profissional === "") {
     profissional = null;
   }
-  const result = await new apsRepository().fciDesatualizada(equipe, profissional);
+
+  // Normalize o formato da data aqui
+    const quadrimestreNormalizado = normalizarDataParaFormatoBanco(quadrimestre);
+  const result = await new apsRepository().fciDesatualizada(quadrimestreNormalizado, equipe, profissional);
   res.status(200).send(result);
 })
 
@@ -194,11 +207,6 @@ atencaobasica.get('/cidadao_sem_fci', async (req, res) => {
   res.status(200).send(result);
 })
 
-atencaobasica.get('/listar_acs_equipe', async (req, res) => {
-  const result = await new apsRepository().getListarAcsEquuipe();  
-  res.status(200).send(result);
-})
-
 // EMULTI
 atencaobasica.get('/atendimento_emulti', async(req, res) => {
   let {equipe, mes, ano } = req.query;
@@ -214,6 +222,132 @@ atencaobasica.get('/atendimento_emulti', async(req, res) => {
   const result = await new apsRepository().atendimentoEmulti(equipe, mes, ano);
   res.status(200).send(result);  
 })
+//-----------------------------------------------------------------------
+//INDICADORES DE QUALIDADE ESF/EAP
+atencaobasica.get('/mais_acesso_aps', async (req, res) => {
+  let {quadrimestre} = req.query  
+   // Verifique se todos os parâmetros estão definidos
+  if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
+    return;
+  }  
+  try {
+    const result = await new apsRepository().maisAcessoAps(quadrimestre);
+    res.status(200).send(result);      
+  } catch (error) {
+    res.status(500).send({ error: 'Erro interno do servidor.'});
+  }
+})
+
+atencaobasica.get('/resumo_mais_acesso', async (req, res) => {
+   let {quadrimestre, equipe} = req.query
+   // Verifique se todos os parâmetros estão definidos
+  if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
+    return;
+  }
+
+  if (!equipe) {
+    equipe = null
+  }
+  try {
+    const result = await new apsRepository().resumoMaisAcesso(quadrimestre, equipe);
+    res.status(200).send(result);      
+  } catch (error) {
+    res.status(500).send({ error: 'Erro interno do servidor.'});
+  }
+})
+
+atencaobasica.get('/populacao_indicador', async (req, res) => {
+  let {quadrimestre, equipe} = req.query
+   // Verifique se todos os parâmetros estão definidos
+  if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
+    return;
+  }
+  if (!equipe) {
+    equipe = null
+  }
+  try {
+    const result = await new apsRepository().populacaoIndicador(quadrimestre, equipe);
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({ error: 'Erro interno do servidor.'});
+  }
+})
+
+atencaobasica.get('/citopatologico', async(req, res) => {
+  let {quadrimestre, equipe} = req.query
+   // Verifique se todos os parâmetros estão definidos
+  if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
+    return;
+  }
+  if (!equipe) {
+    equipe = null
+  }
+  try {
+    const result = await new apsRepository().citopatologico(quadrimestre, equipe);
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({error: 'Erro interno do servidor.'});
+  }
+})
+
+atencaobasica.get('/vacina_hpv', async(req, res) => {
+   let {quadrimestre, equipe} = req.query
+   // Verifique se todos os parâmetros estão definidos
+  if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
+    return;
+  }
+  if (!equipe) {
+    equipe = null
+  }
+  try {
+    const result = await new apsRepository().vacinaHpv(quadrimestre, equipe);
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({error: 'Erro interno no servidor.'});
+  }
+})
+
+atencaobasica.get('/mamografia', async (req, res) => {
+  let {quadrimestre, equipe} = req.query
+   // Verifique se todos os parâmetros estão definidos
+  if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
+    return;
+  }
+  if (!equipe) {
+    equipe = null
+  }
+  try {
+    const result = await new apsRepository().mamografia(quadrimestre, equipe);
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({error: 'Erro interno no servidor.'})
+  }
+  })
+
+  atencaobasica.get('/saude_sexual', async (req, res) => {
+   let {quadrimestre, equipe} = req.query
+   // Verifique se todos os parâmetros estão definidos
+  if (!quadrimestre) {
+    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
+    return;
+  }
+  if (!equipe) {
+    equipe = null
+  }
+  try {
+    const result = await new apsRepository().saudeSexual(quadrimestre, equipe);
+    res.status(200).send(result);    
+  } catch (error) {
+    res.status(500).send({error: 'Erro interno no servidor.'})    
+  }
+  })
+
 
 //HIPERTENSOS
 
@@ -314,6 +448,21 @@ atencaobasica.get('/diabeticos_sexo', async (req, res) => {
   const result = await new apsRepository().dmSexo(equipe);
   res.status(200).send(result);
 })
+
+atencaobasica.get('/crianca_ate_5_anos', async (req, res) => {
+  let { equipe, data } = req.query;
+  if (!equipe) {
+    equipe = null;
+  }
+  if (!data) {
+    data = null;
+  }
+  const result = await new apsRepository().criancaCincoAnos(equipe, data);
+  res.status(200).send(result);
+})
+
+
+
 
 
 

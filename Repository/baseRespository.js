@@ -28,6 +28,15 @@ class baseRopository {
     }
   };
 
+   async getAllOdonto(funcao, p1, p2) {
+    try {
+      const result = (await pool.query(`SELECT * FROM ${funcao}($1, $2)`, [p1, p2])).rows;
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   async getMensal(funcao, p1, p2) {
     try {
       const result = (await pool.query(`SELECT * FROM ${funcao}($1, $2)`, [p1, p2])).rows;
@@ -120,36 +129,54 @@ class baseRopository {
     }
   }
 
-  async getDesatualizadoAcs(funcao, p1, p2) {
+  async getDesatualizadoAcs(funcao, p1, p2, p3) {
     try {
-      const result = (await pool.query(`SELECT * FROM ${funcao}($1, $2)`, [p1,p2])).rows;
+      const result = (await pool.query(`SELECT * FROM ${funcao}($1, $2, $3)`, [p1,p2, p3 ])).rows;
       return result;
     } catch (error) {
       throw error
     }
   }
 
-  async getListarAcsEquuipe(funcao) {
-   try {
-    const result = (await pool.query(`select	
-                    ine,
-                    equipe_nome,
-                    cod_profissional, 
-                    nome_profissional from ${funcao}() 
-                    group by 
-                      ine, 
-                      equipe_nome, 
-                      cod_profissional,
-                      nome_profissional 
-                    order by equipe_nome asc;`)).rows;
+  async getListarAcsEquipe(funcao, p1, p2, p3) {
+    try {
+      const result = (await pool.query(`SELECT * FROM ${funcao}($1, $2, $3)`, [p1, p2, p3])).rows;
       return result;
-
-   }catch (error) {    
-    throw(error);
-   }
+    } catch (error) {
+      throw error;      
+    }
   }
 
-};
+  async getIvcf(funcao, p1, p2) {
+    try {
+      const result = (await pool.query(`SELECT * FROM ${funcao}($1, $2)`, [p1, p2])).rows;
+      return result;
+    } catch (error) {
+      throw error
+      
+    }
+  }
+
+  //INDICADORES DE QUADRIMESTRES
+    async getIndicadoresQuadrimestres(funcao, p1, p2) {
+      try {
+        const result = (await pool.query(`SELECT * FROM ${funcao}($1, $2)`, [p1, p2])).rows;
+        return result;
+      } catch (error) {
+        throw error        
+      }   
+    }
+    //INDICADORES DE QUADRIMESTRES
+    async getIndicadorMaisAcesso(funcao, p1) {
+      try {
+        const result = (await pool.query(`SELECT * FROM ${funcao}($1)`, [p1])).rows;
+        return result;
+      } catch (error) {
+        throw error        
+      }   
+    }
+}
+
 
 
 export default baseRopository;

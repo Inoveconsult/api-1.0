@@ -65,6 +65,24 @@ class utilsRepository extends baseRopository{
     }
   }
 
+  async listarAcsEquipe(p1, p2, p3) {
+      try {
+        const result = await super.getListarAcsEquipe('listar_acs_equipe', p1, p2, p3);
+        return result;
+      } catch (error) {
+        throw(error)
+      }
+   }
+
+   async dataAtualizacao() {
+    try {
+      const result = await super.getSemParametro('atualizacao');
+      return result;
+    } catch (error) {
+      throw (error);
+    }
+   }
+
 }
 
 

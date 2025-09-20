@@ -31,9 +31,18 @@ class apsRepository extends baseRopository{
 
   }
 
-  async idosos(p1, p2) {
+  async indicadorIVCF20(p1, p2) {
     try {
-      const result = await super.getVinculado('idosos_65_anos_mais', p1, p2);
+      const result = await super.getIvcf('resumo_ivcf', p1, p2);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async listarIVCF20(p1, p2) {
+    try {
+      const result = await super.getIvcf('LISTA_IDOSOS_IVCF', p1, p2);
       return result;
     } catch (error) {
       throw error;
@@ -128,9 +137,9 @@ class apsRepository extends baseRopository{
     }
 
     // FCI DESATUALIZADAS
-    async fciDesatualizada(p1, p2){
+    async fciDesatualizada(p1, p2, p3){
       try {
-        const result = await super.getDesatualizadoAcs('fci_desatualizada', p1, p2);
+        const result = await super.getDesatualizadoAcs('fci_desatualizada', p1, p2, p3);
         return result;
       } catch (error) {
         throw error;
@@ -157,12 +166,66 @@ class apsRepository extends baseRopository{
       }
     };
 
-    async getListarAcsEquuipe() {
+    //INDICADORES DE QUALIDADE APS
+    async maisAcessoAps(p1) {
       try {
-        const result = await super.getListarAcsEquuipe('fci_desatualizada');
+        const result = await super.getIndicadorMaisAcesso('mais_acesso_novo', p1);
         return result;
       } catch (error) {
-        throw(error)
+        throw error;
+      }
+    }
+    async resumoMaisAcesso(p1, p2) {
+      try {
+        const result = await super.getIndicadoresMQuadrimestres('resumo_mais_acesso_aps', p1, p2)
+        return result;
+      } catch (error) {
+        throw error;        
+      }
+    }
+
+    async populacaoIndicador(p1, p2) {
+      try {
+        const result = await super.getIndicadoresQuadrimestres('populacao_indicador', p1, p2)
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async citopatologico(p1, p2) {
+      try {
+        const result = await super.getIndicadoresQuadrimestres('citopatologico', p1, p2)
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async vacinaHpv(p1, p2) {
+      try {
+        const result = await super.getIndicadoresQuadrimestres('vacina_hpv', p1, p2)
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async mamografia(p1, p2) {
+      try {
+        const result = await super.getIndicadoresQuadrimestres('mamografia', p1, p2)
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async saudeSexual(p1, p2) {
+      try {
+        const result = await super.getIndicadoresQuadrimestres('saude_sexual', p1, p2)
+        return result;
+      } catch (error) {
+        throw error;
       }
     }
 

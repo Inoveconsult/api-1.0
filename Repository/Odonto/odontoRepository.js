@@ -3,59 +3,66 @@ import baseRopository from "../baseRespository.js";
 class odontoRepository extends baseRopository{
 
   //INDICADORES DE QUALIDADE //
-  async totalTratamentoConcluido(p1, p2, p3){
+
+   async primeiraConsultaProgramatica(p1, p2){
     try{
-      const result = await super.getAll('odonto_tratamento_concluido', p1, p2, p3);
+      const result = await super.getAllOdonto('primeira_consulta', p1, p2);
       return result;
     }catch(error){
       throw error;
     }
   };
 
-  async primeiraConsultaProgramatica(p1, p2, p3){
+  async totalTratamentoConcluido(p1, p2){
     try{
-      const result = await super.getAll('odonto_primeira_consulta', p1, p2, p3);
+      const result = await super.getAllOdonto('tratamento_concluido', p1, p2);
       return result;
     }catch(error){
       throw error;
     }
   };
 
-  async totalTRA(p1, p2, p3){
+  async taxaExodontias(p1, p2){
     try{
-      const result = await super.getAll('odonto_tra', p1, p2, p3);
+      const result = await super.getAllOdonto('tx_exodontias', p1, p2);
       return result;
     }catch(error){
       throw error;
     }
   };
 
-  async totalExodontias(p1, p2, p3){
+  async escovacaoSupervisionada(p1, p2){
     try{
-      const result = await super.getAll('odonto_exodontias_permanente', p1, p2, p3);
+      const result = await super.getAllOdonto('escovacao_supervisionada', p1, p2);
       return result;
     }catch(error){
       throw error;
     }
   };
 
-  async procedimentoPreventivo(p1, p2, p3){
+   async procedimentoPreventivo(p1, p2){
     try{
-      const result = await super.getAll('procedimentos_preventivos', p1, p2, p3);
+      const result = await super.getAllOdonto('procedimento_preventivos', p1, p2);
+      return result;
+    }catch(error){
+      throw error;
+    }
+  }; 
+
+  async totalTRA(p1, p2){
+    try{
+      const result = await super.getAllOdonto('tra', p1, p2);
       return result;
     }catch(error){
       throw error;
     }
   };
 
-  async escovacaoSupervisionada(p1, p2, p3){
-    try{
-      const result = await super.getAll('escovacao_supervisionada', p1, p2, p3);
-      return result;
-    }catch(error){
-      throw error;
-    }
-  }
+
+
+ 
+
+  
 
 
   // INDICADORES GERAIS ODONTOLOGIA
@@ -95,14 +102,7 @@ class odontoRepository extends baseRopository{
     }
   }
 
-    async demandaEspontanea(p1, p2, p3){
-    try{
-      const result = await super.getAll('demanda_espontanea', p1, p2, p3)
-      return result;
-    }catch(error){
-      throw error;
-    }
-  }
+// ================================================================================
 
   async consultaAgendada(p1, p2, p3){
     try{
@@ -203,18 +203,7 @@ class odontoRepository extends baseRopository{
       throw error;
     }
   }
-
  
-
-  // async consultaAgendada(){
-  //   try{
-  //     const result = await super.getAll('odonto_consulta_agendada');
-  //     return result;
-  //   }catch(error){
-  //     throw error;
-  //   }
-  // }
-  
 }
 
 export default odontoRepository;

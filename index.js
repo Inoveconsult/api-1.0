@@ -1,11 +1,60 @@
-import 'dotenv/config';  // Para carregar variáveis de ambiente
+// import 'dotenv/config';
+// import express from 'express';
+// import cors from 'cors';
+// import bodyParser from 'body-parser';
+// import testeConexao from './Routers/routerConection.js';
+// import testarConexao from './Repository/testarConexao.js';
+// import iniciarFunctions from './Repository/Odonto/InitFunctions.js';
+// import criarfunction from './Routers/routerFunctionOdonto.js';
+// import consultaodonto from './Routers/teste.js';
+// import odontologia from './Routers/routerOdonto.js';
+// import atencaobasica from './Routers/routerAps.js';
+// import utilitarios from './Routers/routerUtils.js';
+
+// const app = express();
+
+// // CORS dinâmico e seguro
+// const allowedOrigins = [
+//   'http://localhost:3000',
+//   // 'https://main.d3i03sln9bakli.amplifyapp.com',
+//   'https://api.inovegestor.com'
+// ];
+
+// const cors = require('cors');
+
+// const corsOptions = {
+//   origin: 'http://localhost:3001', // Seu frontend rodando em localhost:3001
+//   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Defina os métodos permitidos
+//   credentials: true // Se precisar enviar cookies ou headers especiais
+// };
+
+// app.use(cors(corsOptions));
+// app.use(bodyParser.json());
+// app.use(bodyParser.urlencoded({ extended: true }));
+
+// // Rotas
+// app.use('/', testeConexao);
+// app.use('/', criarfunction);
+// app.use('/', consultaodonto);
+// app.use('/', odontologia);
+// app.use('/', atencaobasica);
+// app.use('/', utilitarios);
+// app.use(cors(corsOptions));
+
+// // Teste de conexão ao iniciar
+// testarConexao();
+
+// // Inicializa o servidor
+// app.listen(3000, () => console.log('Servidor funcionando na porta 3000'));
+
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+
 import testeConexao from './Routers/routerConection.js';
 import testarConexao from './Repository/testarConexao.js';
-// import InitFunctions from './Repository/Odonto/InitFunctions.js'
-import iniciarFunctions from './Repository/Odonto/InitFunctions.js';
+import iniciarFunctions from './Repository/Odonto/InitFunctions.js'; // Parece não usado ainda
 import criarfunction from './Routers/routerFunctionOdonto.js';
 import consultaodonto from './Routers/teste.js';
 import odontologia from './Routers/routerOdonto.js';
@@ -14,23 +63,29 @@ import utilitarios from './Routers/routerUtils.js';
 
 const app = express();
 
-// URL do frontend (substitua com a URL real do seu frontend)
-// Pode ser definida no arquivo .env
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'; // Caso esteja em desenvolvimento
+// CORS dinâmico e seguro
+const allowedOrigins = [
+  'http://localhost:3001',
+  'https://api.inovegestor.com'
+];
 
-// Configuração do CORS
-app.use(cors({
-  origin: frontendUrl,  // Permite apenas requisições do frontend especificado
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Métodos permitidos
-  allowedHeaders: ['Content-Type', 'Authorization'],  // Cabeçalhos permitidos
-  credentials: true  // Se o seu backend e frontend estiverem em origens diferentes e utilizarem cookies
-}));
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+};
 
-// Middleware para tratar os dados enviados (JSON e URL-encoded)
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Roteadores para diferentes funcionalidades
+// Rotas
 app.use('/', testeConexao);
 app.use('/', criarfunction);
 app.use('/', consultaodonto);
@@ -38,9 +93,8 @@ app.use('/', odontologia);
 app.use('/', atencaobasica);
 app.use('/', utilitarios);
 
-// Função de teste de conexão
+// Teste de conexão ao iniciar
 testarConexao();
 
-// Inicia o servidor
-const PORT = process.env.PORT || 3000; // Usa a porta do ambiente ou 3000 como padrão
-app.listen(PORT, () => console.log(`Servidor funcionando na porta ${PORT}`));
+// Inicializa o servidor
+app.listen(3000, () => console.log('Servidor funcionando na porta 3000'));
