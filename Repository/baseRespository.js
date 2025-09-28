@@ -175,6 +175,15 @@ class baseRopository {
         throw error        
       }   
     }
+
+    async getResumido(funcao, p1) {
+      try {
+        const result = (await pool.query(`SELECT * FROM ${funcao}($1)`, [p1])).rows;
+        return result;        
+      } catch (error) {
+         throw error
+      }
+    }
 }
 
 

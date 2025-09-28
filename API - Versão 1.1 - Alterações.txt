@@ -1,0 +1,13 @@
+API - Versão 1.1
+// ALTERAÇÕES
+* Remoção de Functions Saúde, Hipertensos, Diabéticos, Indicadores de Qualidade Odontologia para adaptação
+  de acordo com novos parêmetros;
+* Removidas algumas rotas não utilizadas;
+
+//INCLUSÕES
+* Funcão do Indicador de Desenvolvimento Infantil;
+* Função Resumo Desenvolvimento Infantil;
+* Funções do Componente Qualidade de Odontologia;
+* Criadas novas rotas - Saude da Criança e Resumo Saúde da Criança;
+
+

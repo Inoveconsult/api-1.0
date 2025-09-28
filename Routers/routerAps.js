@@ -258,78 +258,6 @@ atencaobasica.get('/resumo_mais_acesso', async (req, res) => {
   }
 })
 
-atencaobasica.get('/populacao_indicador', async (req, res) => {
-  let {quadrimestre, equipe} = req.query
-   // Verifique se todos os parâmetros estão definidos
-  if (!quadrimestre) {
-    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
-    return;
-  }
-  if (!equipe) {
-    equipe = null
-  }
-  try {
-    const result = await new apsRepository().populacaoIndicador(quadrimestre, equipe);
-    res.status(200).send(result);
-  } catch (error) {
-    res.status(500).send({ error: 'Erro interno do servidor.'});
-  }
-})
-
-atencaobasica.get('/citopatologico', async(req, res) => {
-  let {quadrimestre, equipe} = req.query
-   // Verifique se todos os parâmetros estão definidos
-  if (!quadrimestre) {
-    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
-    return;
-  }
-  if (!equipe) {
-    equipe = null
-  }
-  try {
-    const result = await new apsRepository().citopatologico(quadrimestre, equipe);
-    res.status(200).send(result);
-  } catch (error) {
-    res.status(500).send({error: 'Erro interno do servidor.'});
-  }
-})
-
-atencaobasica.get('/vacina_hpv', async(req, res) => {
-   let {quadrimestre, equipe} = req.query
-   // Verifique se todos os parâmetros estão definidos
-  if (!quadrimestre) {
-    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
-    return;
-  }
-  if (!equipe) {
-    equipe = null
-  }
-  try {
-    const result = await new apsRepository().vacinaHpv(quadrimestre, equipe);
-    res.status(200).send(result);
-  } catch (error) {
-    res.status(500).send({error: 'Erro interno no servidor.'});
-  }
-})
-
-atencaobasica.get('/mamografia', async (req, res) => {
-  let {quadrimestre, equipe} = req.query
-   // Verifique se todos os parâmetros estão definidos
-  if (!quadrimestre) {
-    res.status(400).send({ error: 'Informe o Parâmetro Quadrimestre.' });
-    return;
-  }
-  if (!equipe) {
-    equipe = null
-  }
-  try {
-    const result = await new apsRepository().mamografia(quadrimestre, equipe);
-    res.status(200).send(result);
-  } catch (error) {
-    res.status(500).send({error: 'Erro interno no servidor.'})
-  }
-  })
-
   atencaobasica.get('/saude_sexual', async (req, res) => {
    let {quadrimestre, equipe} = req.query
    // Verifique se todos os parâmetros estão definidos
@@ -348,122 +276,39 @@ atencaobasica.get('/mamografia', async (req, res) => {
   }
   })
 
-
-//HIPERTENSOS
-
-atencaobasica.get('/has_clinico', async (req, res) => {
-  let { equipe } = req.query;
-  if (!equipe) {
-    equipe = null;
+atencaobasica.get('/saude_crianca', async (req, res) => {
+  let {quadrimestre, equipe} = req.query;
+  if (!quadrimestre) {
+    res.status(400).send({error: 'Informe o Parâmetro Quadrimestre.'});
+    return;
   }
-  const result = await new apsRepository().hasClinico(equipe);
-  res.status(200).send(result);
-
-})
-
-atencaobasica.get('/has_autorreferido', async (req, res) => {
-  let { equipe } = req.query;
   if (!equipe) {
-    equipe = null;
+    equipe =null
   }
-  const result = await new apsRepository().hasAutorreferido(equipe);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/has_sexo', async (req, res) => {
-  let { equipe } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  const result = await new apsRepository().hasSexo(equipe);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/has_fx_etaria', async (req, res) => {
-  let { equipe } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  const result = await new apsRepository().hasFxEtaria(equipe);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/hipertensos_atendidos', async (req, res) => {
-  let { equipe } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  // if (!mes) {
-  //   mes = null;
-  // }    
-  // if (!ano) {
-  //   ano = null;
-  // }
-  const result = await new apsRepository().hasTotalAtendidos(equipe);
-  res.status(200).send(result);
-})
-
-//DIABETICOS
-atencaobasica.get('/diabeticos_clinicos', async (req, res) => {
-  let { equipe } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  const result = await new apsRepository().dmClinicos(equipe);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/diabeticos_autorreferidos', async (req, res) => {
-  let { equipe } = req.query;
-  if (!equipe) {
-    equipe = null
-  }
-  const result = await new apsRepository().dmAutorreferidos(equipe);
-  res.status(200).send(result);
-}),
-
-  atencaobasica.get('/diabeticos_fx_etaria', async (req, res) => {
-    let { equipe } = req.query;
-    if (!equipe) {
-      equipe = null;
-    }
-    const result = await new apsRepository().dmFxEtaria(equipe);
+  try {
+    const result = await new apsRepository().desenInfantil(quadrimestre, equipe);
     res.status(200).send(result);
-  })
+  } catch (error) {
+    res.status(500).send({error: 'Erro interno no servidor.'});
+  }
+})
 
-atencaobasica.get('/diabeticos_atendidos', async (req, res) => {
-  let { equipe } = req.query;
+atencaobasica.get('/resumo_saude_crianca', async (req, res) => {
+  let {quadrimestre, equipe } = req.query;
+  if(!quadrimestre) {
+    res.status(400).send({error: 'Informa o Parâmetro Quadrimestre.'});
+    return;
+  }
   if (!equipe) {
     equipe = null;
   }
-  const result = await new apsRepository().dmAtendidos(equipe);
-  res.status(200).send(result);
-})
-
-atencaobasica.get('/diabeticos_sexo', async (req, res) => {
-  let { equipe } = req.query;
-  if (!equipe) {
-    equipe = null;
+  try {
+    const result = await new apsRepository().resumoDesenvInfantil(quadrimestre, equipe);
+    res.status(200).send(result)     
+  } catch (error) {
+    res.status(500).send({error: 'Erro Interno no servidor.'});
   }
-  const result = await new apsRepository().dmSexo(equipe);
-  res.status(200).send(result);
 })
-
-atencaobasica.get('/crianca_ate_5_anos', async (req, res) => {
-  let { equipe, data } = req.query;
-  if (!equipe) {
-    equipe = null;
-  }
-  if (!data) {
-    data = null;
-  }
-  const result = await new apsRepository().criancaCincoAnos(equipe, data);
-  res.status(200).send(result);
-})
-
-
-
-
 
 
 export default atencaobasica;

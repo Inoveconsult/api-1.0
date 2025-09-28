@@ -694,36 +694,6 @@ const functions = [
         $$`
     },
     // INDICADORES DE QUALIDADE NOVO FINANCIAMENTO
-  
-
-    {
-        name: 'Tipo de Consulta_Odonto',
-        definition: `create or replace function odonto_tipo_consulta(
-	p_equipe varchar default null,
-	p_mes integer default null,
-	p_ano integer default null)
-    returns table (equipe varchar, tipo_consulta varchar, total integer)
-    language plpgsql
-    as $$
-    begin
-        return query
-        select 
-        tde.nu_ine as equipe, 
-        tdtco.ds_tipo_consulta_odonto as tipo_consulta,
-        count(tfao.co_seq_fat_atd_odnt)::integer as total
-        from tb_fat_atendimento_odonto tfao
-        inner join tb_dim_tipo_consulta_odonto tdtco on
-        tdtco.co_seq_dim_tipo_cnsulta_odonto = tfao.co_dim_tipo_consulta
-        inner join tb_dim_equipe tde on
-        tde.co_seq_dim_equipe = tfao.co_dim_equipe_1
-        where co_dim_tempo >= '20240101'
-        AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-        AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_mes)
-        AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfao.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_ano)
-        group by tde.nu_ine, tdtco.ds_tipo_consulta_odonto;	
-    end;
-    $$`
-    },
 
     {
         name: 'Atend. Odonto Sexo',
@@ -1425,7 +1395,7 @@ const functions = [
                 ) AS DIAS
                 GROUP BY DIAS.EQUIPE, DIAS.NO_PROFISSIONAL;
             END;
-            $$;`
+        $$;`
     },
 
     {
@@ -1510,7 +1480,7 @@ const functions = [
         ) as dias
         group by dias.no_equipe, dias.no_profissional;
     end;
-    $$;`
+        $$;`
     },
 
     {
@@ -1787,7 +1757,7 @@ BEGIN
 	SELECT * FROM RESUMO_PIVOTADO		
 	ORDER BY NU_IDENTIFICADOR;	
 END;
-$$;`
+        $$;`
     },
 
     {name:'Listagem Duplicados',
@@ -2550,764 +2520,7 @@ $$;`
         $$ language PLPGSQL;`
     },
 
-    {
-        name: 'POPULAÇÃO FEMININA',
-        definition: `CREATE OR REPLACE FUNCTION POPULACAO_INDICADOR(
-            QUADRIMESTRE DATE,
-            P_EQUIPE TEXT DEFAULT NULL)
-        RETURNS TABLE(
-            EQUIPE VARCHAR,
-            TOTAL_MULHERES INTEGER,
-            MULHERES_COM_FCI INTEGER,
-            MULHERES_FCI_ATUALIZADA INTEGER
-            )
-        AS $$
-        BEGIN
-            IF P_EQUIPE IS NULL THEN
-                RETURN QUERY		
-                WITH DIAGNOSTICO_MULHERES AS (
-                SELECT
-                    TACV.NU_INE_VINC_EQUIPE AS INE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                    ) AS TOTAL_MULHERES_COM_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '9 YEARS' AND INTERVAL '69 YEARS'
-                    ) AS MULHERES_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '9 YEARS' AND INTERVAL '69 YEARS'
-                        AND TACV.DT_ULTIMA_ATUALIZACAO_CIDADAO BETWEEN QUADRIMESTRE - INTERVAL '24 MONTH'
-                            AND QUADRIMESTRE
-                    ) AS MULHERES_FCI_ATUALIZADAS
-                FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                AND TACV.ST_POSSUI_FCI = 1
-                --AND (P_EQUIPE IS NULL OR TACV.NU_INE_VINC_EQUIPE = P_EQUIPE)
-                GROUP BY TACV.NU_INE_VINC_EQUIPE
-                )
-                SELECT 
-                'TODAS AS EQUIPES'::VARCHAR V_INE,
-                SUM(COALESCE(MULHERES_FCI, 0))::INTEGER AS MULHERES_FCI,
-                SUM(COALESCE(TOTAL_MULHERES_COM_FCI, 0))::INTEGER AS TOTAL_MULHERES_COM_FCI,
-                SUM(COALESCE(MULHERES_FCI_ATUALIZADAS, 0))::INTEGER AS MULHERES_FCI_ATUALIZADAS
-            FROM DIAGNOSTICO_MULHERES;
-        --	GROUP BY INE, MULHERES_FCI,TOTAL_MULHERES_COM_FCI, MULHERES_FCI_ATUALIZADAS 
-        --	ORDER BY SUM(COALESCE(MULHERES_FCI_ATUALIZADAS, 0)) DESC;
-            ELSE
-                RETURN QUERY		
-                WITH DIAGNOSTICO_MULHERES AS (
-                SELECT
-                    TACV.NU_INE_VINC_EQUIPE AS INE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                    ) AS TOTAL_MULHERES_COM_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '9 YEARS' AND INTERVAL '69 YEARS'
-                    ) AS MULHERES_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '9 YEARS' AND INTERVAL '69 YEARS'
-                        AND TACV.DT_ULTIMA_ATUALIZACAO_CIDADAO BETWEEN QUADRIMESTRE - INTERVAL '24 MONTH'
-                            AND QUADRIMESTRE
-                    ) AS MULHERES_FCI_ATUALIZADAS
-                FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                AND TACV.ST_POSSUI_FCI = 1
-                AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE
-                GROUP BY TACV.NU_INE_VINC_EQUIPE
-                )
-                SELECT 
-                INE,
-                SUM(COALESCE(MULHERES_FCI, 0))::INTEGER AS MULHERES_FCI,
-                SUM(COALESCE(TOTAL_MULHERES_COM_FCI, 0))::INTEGER AS TOTAL_MULHERES_COM_FCI,
-                SUM(COALESCE(MULHERES_FCI_ATUALIZADAS, 0))::INTEGER AS MULHERES_FCI_ATUALIZADAS
-            FROM DIAGNOSTICO_MULHERES
-            GROUP BY INE
-            ORDER BY SUM(COALESCE(MULHERES_FCI_ATUALIZADAS, 0)) DESC;		
-            END IF;	
-        END;
-        $$ LANGUAGE PLPGSQL;`
-    },
-    
-    {
-        name: 'CITOPATOLOGICO EM MULHERES DE 25 A 64 ANOS',
-        definition: `CREATE OR REPLACE FUNCTION CITOPATOLOGICO(
-            QUADRIMESTRE DATE,
-            P_EQUIPE TEXT DEFAULT NULL
-        )
-        RETURNS TABLE (
-            V_INE VARCHAR,
-            EQUIPE_VINC VARCHAR,
-            CITO_SOLICITADO INTEGER,
-            CITO_AVALIADO INTEGER,
-            TOTAL_CITOLOGIA INTEGER,
-            TOTAL_MULHERES INTEGER,
-            ESCORE FLOAT
-        )
-        AS $$
-        BEGIN
-            IF P_EQUIPE IS NULL THEN
-                RETURN QUERY
-                WITH CTE_EQUIPES AS (
-                    SELECT NU_INE AS INE, NO_EQUIPE AS NOME_EQUIPE
-                    FROM TB_EQUIPE
-                    LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
-                    WHERE ST_ATIVO = 1 AND NU_MS IN ('70', '76')
-                ),
-                MULHERES_25_64_ANOS AS (
-                    SELECT
-                    TACV.NU_INE_VINC_EQUIPE AS INE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    ) AS TOTAL_MULHERES_COM_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '25 YEARS' AND INTERVAL '64 YEARS'
-                    ) AS MULHERES_25_64,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '25 YEARS' AND INTERVAL '64 YEARS'
-                        AND TACV.DT_ULTIMA_ATUALIZACAO_CIDADAO BETWEEN QUADRIMESTRE - INTERVAL '24 MONTH'
-                            AND QUADRIMESTRE
-                    ) AS MULHERES_25_64_ATUALIZADAS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    --AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                ),
-                EXAMES_SOLICITADOS AS (
-                    SELECT TACV.NU_INE_VINC_EQUIPE, COUNT(CO_SEQ_FAT_CIDADAO_PEC) AS TOTAL_EXAMES_SOLICITADOS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    INNER JOIN (
-                        SELECT CO_CIDADAO, CO_SEQ_FAT_CIDADAO_PEC
-                        FROM TB_FAT_CIDADAO_PEC
-                        WHERE CO_CIDADAO IS NOT NULL
-                    ) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                    INNER JOIN (
-                        SELECT * FROM TB_FAT_ATENDIMENTO_INDIVIDUAL
-                        WHERE CO_FAT_CIDADAO_PEC IS NOT NULL
-                    ) FAI ON FAI.CO_FAT_CIDADAO_PEC = CIDADAO.CO_SEQ_FAT_CIDADAO_PEC
-                    INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = FAI.CO_DIM_CBO_1
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND EXTRACT(YEAR FROM TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) -
-                        EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) BETWEEN 25 AND 64
-                    AND TDC.NU_CBO IN ('223505', '223565', '225130', '225142', '225170')
-                    AND TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') BETWEEN QUADRIMESTRE - INTERVAL '36 MONTHS' AND QUADRIMESTRE
-                    AND EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_SOLICITADOS), '|')) AS PROC
-                        WHERE PROC IN ('0203010019', '0203010086')
-                    )
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                ),
-                EXAMES_AVALIADOS AS (
-                    SELECT TACV.NU_INE_VINC_EQUIPE, COUNT(CO_SEQ_FAT_CIDADAO_PEC) AS TOTAL_EXAMES_AVALIADOS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    INNER JOIN (
-                        SELECT CO_CIDADAO, CO_SEQ_FAT_CIDADAO_PEC
-                        FROM TB_FAT_CIDADAO_PEC
-                        WHERE CO_CIDADAO IS NOT NULL
-                    ) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                    INNER JOIN (
-                        SELECT * FROM TB_FAT_ATENDIMENTO_INDIVIDUAL
-                        WHERE CO_FAT_CIDADAO_PEC IS NOT NULL
-                    ) FAI ON FAI.CO_FAT_CIDADAO_PEC = CIDADAO.CO_SEQ_FAT_CIDADAO_PEC
-                    INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = FAI.CO_DIM_CBO_1
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    AND EXTRACT(YEAR FROM TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) -
-                        EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) BETWEEN 25 AND 64
-                    AND TDC.NU_CBO IN ('223505', '223565', '225130', '225142', '225170')
-                    AND TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') BETWEEN QUADRIMESTRE - INTERVAL '36 MONTHS' AND QUADRIMESTRE
-                    AND EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_AVALIADOS), '|')) AS PROC
-                        WHERE PROC IN ('0203010019', '0203010086')
-                    )
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_SOLICITADOS), '|')) AS PROC
-                        WHERE PROC IN ('0203010019', '0203010086')
-                    )
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                )
-                SELECT
-                NULL::VARCHAR AS V_INE,
-                'TODAS AS EQUIPES'::VARCHAR AS EQUIPE_VINC,
-                    SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0))::INTEGER,
-                    SUM(COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0))::INTEGER,
-                    SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0) + COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0))::INTEGER,
-                    SUM(COALESCE(MULHER.MULHERES_25_64_ATUALIZADAS, 0))::INTEGER,
-                    ROUND(
-                        (SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0)::NUMERIC) + SUM(COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0)::NUMERIC)) * 0.2, 
-                            --/NULLIF(SUM(COALESCE(MULHER.MULHERES_25_64_ATUALIZADAS, 0)), 0),
-                            2)::FLOAT
-                FROM CTE_EQUIPES EQUIPES
-                LEFT JOIN MULHERES_25_64_ANOS MULHER ON MULHER.INE = EQUIPES.INE
-                LEFT JOIN EXAMES_SOLICITADOS ES ON ES.NU_INE_VINC_EQUIPE = EQUIPES.INE
-                LEFT JOIN EXAMES_AVALIADOS EA ON EA.NU_INE_VINC_EQUIPE = EQUIPES.INE;		
-            ELSE
-                RETURN QUERY
-                    WITH CTE_EQUIPES AS (
-                    SELECT NU_INE AS INE, NO_EQUIPE AS NOME_EQUIPE
-                    FROM TB_EQUIPE
-                    LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
-                    WHERE ST_ATIVO = 1 AND NU_MS IN ('70', '76')
-                ),
-                MULHERES_25_64_ANOS AS (
-                SELECT
-                    TACV.NU_INE_VINC_EQUIPE AS INE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    ) AS TOTAL_MULHERES_COM_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '25 YEARS' AND INTERVAL '64 YEARS'
-                    ) AS MULHERES_25_64,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '25 YEARS' AND INTERVAL '64 YEARS'
-                        AND TACV.DT_ULTIMA_ATUALIZACAO_CIDADAO BETWEEN QUADRIMESTRE - INTERVAL '24 MONTH'
-                            AND QUADRIMESTRE
-                    ) AS MULHERES_25_64_ATUALIZADAS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                ),
-                EXAMES_SOLICITADOS AS (
-                    SELECT TACV.NU_INE_VINC_EQUIPE, COUNT(CO_SEQ_FAT_CIDADAO_PEC) AS TOTAL_EXAMES_SOLICITADOS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    INNER JOIN (
-                        SELECT CO_CIDADAO, CO_SEQ_FAT_CIDADAO_PEC
-                        FROM TB_FAT_CIDADAO_PEC
-                        WHERE CO_CIDADAO IS NOT NULL
-                    ) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                    INNER JOIN (
-                        SELECT * FROM TB_FAT_ATENDIMENTO_INDIVIDUAL
-                        WHERE CO_FAT_CIDADAO_PEC IS NOT NULL
-                    ) FAI ON FAI.CO_FAT_CIDADAO_PEC = CIDADAO.CO_SEQ_FAT_CIDADAO_PEC
-                    INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = FAI.CO_DIM_CBO_1
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND EXTRACT(YEAR FROM TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) -
-                        EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) BETWEEN 25 AND 64
-                    AND TDC.NU_CBO IN ('223505', '223565', '225130', '225142', '225170')
-                    AND TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') BETWEEN QUADRIMESTRE - INTERVAL '36 MONTHS' AND QUADRIMESTRE
-                    AND EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_SOLICITADOS), '|')) AS PROC
-                        WHERE PROC IN ('0203010019', '0203010086')
-                    )
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                ),
-                EXAMES_AVALIADOS AS (
-                    SELECT TACV.NU_INE_VINC_EQUIPE, COUNT(CO_SEQ_FAT_CIDADAO_PEC) AS TOTAL_EXAMES_AVALIADOS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    INNER JOIN (
-                        SELECT CO_CIDADAO, CO_SEQ_FAT_CIDADAO_PEC
-                        FROM TB_FAT_CIDADAO_PEC
-                        WHERE CO_CIDADAO IS NOT NULL
-                    ) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                    INNER JOIN (
-                        SELECT * FROM TB_FAT_ATENDIMENTO_INDIVIDUAL
-                        WHERE CO_FAT_CIDADAO_PEC IS NOT NULL
-                    ) FAI ON FAI.CO_FAT_CIDADAO_PEC = CIDADAO.CO_SEQ_FAT_CIDADAO_PEC
-                    INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = FAI.CO_DIM_CBO_1
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    AND EXTRACT(YEAR FROM TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) -
-                        EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) BETWEEN 25 AND 64
-                    AND TDC.NU_CBO IN ('223505', '223565', '225130', '225142', '225170')
-                    AND TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') BETWEEN QUADRIMESTRE - INTERVAL '36 MONTHS' AND QUADRIMESTRE
-                    AND EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_AVALIADOS), '|')) AS PROC
-                        WHERE PROC IN ('0203010019', '0203010086')
-                    )
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_SOLICITADOS), '|')) AS PROC
-                        WHERE PROC IN ('0203010019', '0203010086')
-                    )
-                    AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE	
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                )
-                SELECT
-                    EQUIPES.INE,
-                    EQUIPES.NOME_EQUIPE,
-                    SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0))::INTEGER,
-                    SUM(COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0))::INTEGER,
-                    SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0) + COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0))::INTEGER,
-                    SUM(COALESCE(MULHER.MULHERES_25_64_ATUALIZADAS, 0))::INTEGER,
-                    ROUND(
-                        (SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0)::NUMERIC) + SUM(COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0)::NUMERIC)) * 0.2, 
-                        --	/NULLIF(SUM(COALESCE(MULHER.MULHERES_25_64_ATUALIZADAS, 0)), 0),
-                        2
-                    )::FLOAT
-                FROM CTE_EQUIPES EQUIPES
-                LEFT JOIN MULHERES_25_64_ANOS MULHER ON MULHER.INE = EQUIPES.INE
-                LEFT JOIN EXAMES_SOLICITADOS ES ON ES.NU_INE_VINC_EQUIPE = EQUIPES.INE
-                LEFT JOIN EXAMES_AVALIADOS EA ON EA.NU_INE_VINC_EQUIPE = EQUIPES.INE
-                WHERE EQUIPES.INE = P_EQUIPE
-                GROUP BY EQUIPES.INE, EQUIPES.NOME_EQUIPE, ES.TOTAL_EXAMES_SOLICITADOS, EA.TOTAL_EXAMES_AVALIADOS, MULHERES_25_64_ATUALIZADAS;
-            END IF;
-        END;
-        $$ LANGUAGE PLPGSQL;`
-    },
-
-    {
-        name: 'VACINA HPV CRIANÇAS E ADOLESCENTES DE 9 A 14 ANOS',
-        definition: `CREATE OR REPLACE FUNCTION VACINA_HPV(
-            QUADRIMESTRE DATE,
-            P_EQUIPE TEXT DEFAULT NULL)
-        RETURNS TABLE(
-            INE_VINC VARCHAR,
-            EQUIPE_VINC VARCHAR,
-            HPV4 INTEGER,
-            HPV9 INTEGER,
-            QTD_DOSES INTEGER,
-            TOTAL_CRIANCA_ADOLES INTEGER,
-            COBERTURA FLOAT)
-        AS $$
-        BEGIN
-            IF P_EQUIPE IS NULL THEN
-            RETURN QUERY
-            WITH CTE_EQUIPES AS (
-                    SELECT NU_INE AS INE, NO_EQUIPE AS NOME_EQUIPE
-                    FROM TB_EQUIPE
-                    LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
-                    WHERE ST_ATIVO = 1 AND NU_MS IN ('70', '76')
-            ),
-            CRIANCA_ADOLESCENTE AS (
-                SELECT
-                    TACV.NU_INE_VINC_EQUIPE AS INE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    ) AS TOTAL_MULHERES_COM_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '9 YEARS' AND INTERVAL '14 YEARS'
-                    ) AS CRIANCA_ADOLESCENTE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '9 YEARS' AND INTERVAL '14 YEARS'
-                        AND TACV.DT_ULTIMA_ATUALIZACAO_CIDADAO BETWEEN QUADRIMESTRE - INTERVAL '24 MONTH'
-                            AND QUADRIMESTRE
-                    ) AS CRIANCA_ADOLESCENTE_ATUALIZADAS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    --AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-            ),
-            IMUNO_1 AS (
-                SELECT 
-                    TACV.NU_INE_VINC_EQUIPE, 
-                    COUNT(*) AS TOTAL_DOSES
-                FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                INNER JOIN (SELECT TFCP.CO_CIDADAO, TFCP.CO_SEQ_FAT_CIDADAO_PEC FROM TB_FAT_CIDADAO_PEC TFCP
-                WHERE TFCP.CO_CIDADAO IS NOT NULL) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                INNER JOIN (SELECT * FROM TB_FAT_VACINACAO TFV 
-                WHERE TFV.CO_FAT_CIDADAO_PEC IS NOT NULL) IMUNO ON CIDADAO.CO_SEQ_FAT_CIDADAO_PEC = IMUNO.CO_FAT_CIDADAO_PEC 
-                WHERE
-                    TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND EXTRACT(YEAR FROM TO_DATE(IMUNO.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) - EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) 
-                        BETWEEN 9 AND 14
-                    AND TO_DATE(IMUNO.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') <= QUADRIMESTRE
-                AND EXISTS (
-                    SELECT 1
-                FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM IMUNO.DS_FILTRO_IMUNOBIOLOGICO), '|')) AS IMUNO
-                WHERE IMUNO IN ('67'))
-                GROUP BY
-                    TACV.NU_INE_VINC_EQUIPE
-            ),
-            IMUNO_2 AS (
-                SELECT 
-                    TACV.NU_INE_VINC_EQUIPE, 
-                    COUNT(*) AS TOTAL_DOSES
-                FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                INNER JOIN (SELECT TFCP.CO_CIDADAO, TFCP.CO_SEQ_FAT_CIDADAO_PEC FROM TB_FAT_CIDADAO_PEC TFCP
-                WHERE TFCP.CO_CIDADAO IS NOT NULL) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                INNER JOIN (SELECT * FROM TB_FAT_VACINACAO TFV 
-                WHERE TFV.CO_FAT_CIDADAO_PEC IS NOT NULL) IMUNO ON CIDADAO.CO_SEQ_FAT_CIDADAO_PEC = IMUNO.CO_FAT_CIDADAO_PEC 
-                WHERE
-                    TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND EXTRACT(YEAR FROM TO_DATE(IMUNO.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) - EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) 
-                        BETWEEN 9 AND 14
-                    AND TO_DATE(IMUNO.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') <= QUADRIMESTRE
-                AND EXISTS (
-                    SELECT 1
-                FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM IMUNO.DS_FILTRO_IMUNOBIOLOGICO), '|')) AS IMUNO
-                WHERE IMUNO IN ('93'))
-                GROUP BY
-                    TACV.NU_INE_VINC_EQUIPE
-            )
-            SELECT 
-                NULL::VARCHAR AS V_INE,
-                'TODAS AS EQUIPES'::VARCHAR AS V_NOME_EQUIPE,
-                SUM(COALESCE(I1.TOTAL_DOSES, 0))::INTEGER AS HPV4,
-                SUM(COALESCE(I2.TOTAL_DOSES, 0))::INTEGER AS HPV9,
-                (SUM(COALESCE(I1.TOTAL_DOSES, 0)) + SUM(COALESCE(I2.TOTAL_DOSES, 0)))::INTEGER AS QTD_DOSES,		
-                SUM(COALESCE(CA.CRIANCA_ADOLESCENTE_ATUALIZADAS, 0))::INTEGER AS TOTAL_CRIANCA_ADOLESCENTE,	
-                ROUND((SUM(COALESCE(I1.TOTAL_DOSES, 0)) + SUM(COALESCE(I2.TOTAL_DOSES, 0)) ::NUMERIC) * 0.3, 
-                    --/ NULLIF(SUM(COALESCE(CA.CRIANCA_ADOLESCENTE_ATUALIZADAS, 0)),0),
-                    2)::FLOAT AS COBERTURA
-            FROM CTE_EQUIPES EQUIPE
-            LEFT JOIN CRIANCA_ADOLESCENTE CA ON CA.INE = EQUIPE.INE
-            LEFT JOIN IMUNO_1 I1 ON I1.NU_INE_VINC_EQUIPE = EQUIPE.INE
-            LEFT JOIN IMUNO_2 I2 ON I2.NU_INE_VINC_EQUIPE = EQUIPE.INE;
-            --GROUP BY
-            --EQUIPE.INE, EQUIPE.NOME_EQUIPE, I1.TOTAL_DOSES, I2.TOTAL_DOSES, CA.TOTAL_CRIANCA_ADOLESCENTE;
-            ELSE
-            RETURN QUERY
-            WITH CTE_EQUIPES AS (
-                    SELECT NU_INE AS INE, NO_EQUIPE AS NOME_EQUIPE
-                    FROM TB_EQUIPE
-                    LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
-                    WHERE ST_ATIVO = 1 AND NU_MS IN ('70', '76')
-            ),
-            CRIANCA_ADOLESCENTE AS (
-                SELECT
-                    TACV.NU_INE_VINC_EQUIPE AS INE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    ) AS TOTAL_MULHERES_COM_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '9 YEARS' AND INTERVAL '14 YEARS'
-                    ) AS CRIANCA_ADOLESCENTE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '9 YEARS' AND INTERVAL '14 YEARS'
-                        AND TACV.DT_ULTIMA_ATUALIZACAO_CIDADAO BETWEEN QUADRIMESTRE - INTERVAL '24 MONTH'
-                            AND QUADRIMESTRE
-                    ) AS CRIANCA_ADOLESCENTE_ATUALIZADAS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-            ),
-            IMUNO_1 AS (
-                SELECT 
-                    TACV.NU_INE_VINC_EQUIPE, 
-                    COUNT(*) AS TOTAL_DOSES
-                FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                INNER JOIN (SELECT TFCP.CO_CIDADAO, TFCP.CO_SEQ_FAT_CIDADAO_PEC FROM TB_FAT_CIDADAO_PEC TFCP
-                WHERE TFCP.CO_CIDADAO IS NOT NULL) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                INNER JOIN (SELECT * FROM TB_FAT_VACINACAO TFV 
-                WHERE TFV.CO_FAT_CIDADAO_PEC IS NOT NULL) IMUNO ON CIDADAO.CO_SEQ_FAT_CIDADAO_PEC = IMUNO.CO_FAT_CIDADAO_PEC 
-                WHERE
-                    TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND EXTRACT(YEAR FROM TO_DATE(IMUNO.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) - EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) 
-                        BETWEEN 9 AND 14
-                    AND TO_DATE(IMUNO.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') <= QUADRIMESTRE
-                AND EXISTS (
-                    SELECT 1
-                FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM IMUNO.DS_FILTRO_IMUNOBIOLOGICO), '|')) AS IMUNO
-                WHERE IMUNO IN ('67'))
-                GROUP BY
-                    TACV.NU_INE_VINC_EQUIPE
-            ),
-            IMUNO_2 AS (
-                SELECT 
-                    TACV.NU_INE_VINC_EQUIPE, 
-                    COUNT(*) AS TOTAL_DOSES
-                FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                INNER JOIN (SELECT TFCP.CO_CIDADAO, TFCP.CO_SEQ_FAT_CIDADAO_PEC FROM TB_FAT_CIDADAO_PEC TFCP
-                WHERE TFCP.CO_CIDADAO IS NOT NULL) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                INNER JOIN (SELECT * FROM TB_FAT_VACINACAO TFV 
-                WHERE TFV.CO_FAT_CIDADAO_PEC IS NOT NULL) IMUNO ON CIDADAO.CO_SEQ_FAT_CIDADAO_PEC = IMUNO.CO_FAT_CIDADAO_PEC 
-                WHERE
-                    TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND EXTRACT(YEAR FROM TO_DATE(IMUNO.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) - EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) 
-                        BETWEEN 9 AND 14
-                    AND TO_DATE(IMUNO.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') <= QUADRIMESTRE
-                AND EXISTS (
-                    SELECT 1
-                FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM IMUNO.DS_FILTRO_IMUNOBIOLOGICO), '|')) AS IMUNO
-                WHERE IMUNO IN ('93'))
-                GROUP BY
-                    TACV.NU_INE_VINC_EQUIPE
-            )
-            SELECT 
-                EQUIPE.INE,
-                EQUIPE.NOME_EQUIPE,
-                COALESCE(I1.TOTAL_DOSES, 0)::INTEGER AS HPV4,
-                COALESCE(I2.TOTAL_DOSES, 0)::INTEGER AS HPV9,
-                (COALESCE(I1.TOTAL_DOSES, 0) + COALESCE(I2.TOTAL_DOSES, 0))::INTEGER AS QTD_DOSES,
-                SUM(COALESCE(CA.CRIANCA_ADOLESCENTE_ATUALIZADAS, 0))::INTEGER AS TOTAL_CRIANCA_ADOLESCENTE,	
-                ROUND((COALESCE(I1.TOTAL_DOSES, 0) + COALESCE(I2.TOTAL_DOSES, 0)) ::NUMERIC * 0.3, 
-                    --/ NULLIF(COALESCE(CA.CRIANCA_ADOLESCENTE_ATUALIZADAS, 0),0), 
-                    2)::FLOAT AS COBERTURA
-            FROM CTE_EQUIPES EQUIPE
-            LEFT JOIN CRIANCA_ADOLESCENTE CA ON CA.INE = EQUIPE.INE
-            LEFT JOIN IMUNO_1 I1 ON I1.NU_INE_VINC_EQUIPE = EQUIPE.INE
-            LEFT JOIN IMUNO_2 I2 ON I2.NU_INE_VINC_EQUIPE = EQUIPE.INE
-            WHERE EQUIPE.INE = P_EQUIPE
-            GROUP BY
-                EQUIPE.INE,	EQUIPE.NOME_EQUIPE, I1.TOTAL_DOSES, I2.TOTAL_DOSES, CRIANCA_ADOLESCENTE_ATUALIZADAS;	
-            END IF;	
-        END;
-        $$ LANGUAGE PLPGSQL;`
-    },
-
-    {
-        name: 'MAMOGRAFIA EME MULHERES DE 50 A 69 ANOS',
-        definition: `CREATE OR REPLACE FUNCTION MAMOGRAFIA(
-            QUADRIMESTRE DATE,
-            P_EQUIPE TEXT DEFAULT NULL
-        )
-        RETURNS TABLE (
-            V_INE VARCHAR,
-            EQUIPE_VINC VARCHAR,
-            MAMO_SOLICITADO INTEGER,
-            MAMO_AVALIADO INTEGER,
-            TOTAL_MAMOGRAFIA INTEGER,
-            TOTAL_MULHERES INTEGER,
-            ESCORE FLOAT
-        )
-        AS $$
-        BEGIN
-            IF P_EQUIPE IS NULL THEN
-                RETURN QUERY
-                WITH CTE_EQUIPES AS (
-                    SELECT NU_INE AS INE, NO_EQUIPE AS NOME_EQUIPE
-                    FROM TB_EQUIPE
-                    LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
-                    WHERE ST_ATIVO = 1 AND NU_MS IN ('70', '76')
-                ),
-                MULHERES_50_69_ANOS AS (
-                    SELECT
-                    TACV.NU_INE_VINC_EQUIPE AS INE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    ) AS TOTAL_MULHERES_COM_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(TO_DATE('20250831', 'YYYYMMDD'), TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '50 YEARS' AND INTERVAL '69 YEARS'
-                    ) AS MULHERES_50_69,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '50 YEARS' AND INTERVAL '69 YEARS'
-                        AND TACV.DT_ULTIMA_ATUALIZACAO_CIDADAO BETWEEN QUADRIMESTRE - INTERVAL '24 MONTH'
-                            AND QUADRIMESTRE
-                    ) AS MULHERES_50_69_ATUALIZADAS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    --AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                ),
-                EXAMES_SOLICITADOS AS (
-                    SELECT TACV.NU_INE_VINC_EQUIPE, COUNT(CO_SEQ_FAT_CIDADAO_PEC) AS TOTAL_EXAMES_SOLICITADOS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    INNER JOIN (
-                        SELECT CO_CIDADAO, CO_SEQ_FAT_CIDADAO_PEC
-                        FROM TB_FAT_CIDADAO_PEC
-                        WHERE CO_CIDADAO IS NOT NULL
-                    ) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                    INNER JOIN (
-                        SELECT * FROM TB_FAT_ATENDIMENTO_INDIVIDUAL
-                        WHERE CO_FAT_CIDADAO_PEC IS NOT NULL
-                    ) FAI ON FAI.CO_FAT_CIDADAO_PEC = CIDADAO.CO_SEQ_FAT_CIDADAO_PEC
-                    INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = FAI.CO_DIM_CBO_1
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND EXTRACT(YEAR FROM TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) -
-                        EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) BETWEEN 50 AND 69
-                    AND TDC.NU_CBO IN ('223505', '223565', '225130', '225142', '225170')
-                    AND TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') BETWEEN QUADRIMESTRE - INTERVAL '24 MONTHS' AND QUADRIMESTRE
-                    AND EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_SOLICITADOS), '|')) AS PROC
-                        WHERE PROC IN ('0204030188')
-                    )
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                ),
-                EXAMES_AVALIADOS AS (
-                    SELECT TACV.NU_INE_VINC_EQUIPE, COUNT(CO_SEQ_FAT_CIDADAO_PEC) AS TOTAL_EXAMES_AVALIADOS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    INNER JOIN (
-                        SELECT CO_CIDADAO, CO_SEQ_FAT_CIDADAO_PEC
-                        FROM TB_FAT_CIDADAO_PEC
-                        WHERE CO_CIDADAO IS NOT NULL
-                    ) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                    INNER JOIN (
-                        SELECT * FROM TB_FAT_ATENDIMENTO_INDIVIDUAL
-                        WHERE CO_FAT_CIDADAO_PEC IS NOT NULL
-                    ) FAI ON FAI.CO_FAT_CIDADAO_PEC = CIDADAO.CO_SEQ_FAT_CIDADAO_PEC
-                    INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = FAI.CO_DIM_CBO_1
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    AND EXTRACT(YEAR FROM TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) -
-                        EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) BETWEEN 50 AND 69
-                    AND TDC.NU_CBO IN ('223505', '223565', '225130', '225142', '225170')
-                    AND TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') BETWEEN QUADRIMESTRE - INTERVAL '24 MONTHS' AND QUADRIMESTRE
-                    AND EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_AVALIADOS), '|')) AS PROC
-                        WHERE PROC IN ('0204030188')
-                    )
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_SOLICITADOS), '|')) AS PROC
-                        WHERE PROC IN ('0204030188')
-                    )
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                )
-                SELECT
-                    NULL::VARCHAR AS V_INE,
-                'TODAS AS EQUIPES'::VARCHAR AS EQUIPE_VINC,
-                    SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0))::INTEGER,
-                    SUM(COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0))::INTEGER,
-                    SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0) + COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0))::INTEGER,
-                    SUM(COALESCE(MULHER.MULHERES_50_69_ATUALIZADAS, 0))::INTEGER,
-                    ROUND(
-                        (SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0)::NUMERIC) + SUM(COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0)::NUMERIC)) * 0.2,
-                            ---/NULLIF(SUM(COALESCE(MULHER.MULHERES_50_69_ATUALIZADAS, 0)), 0),
-                        2)::FLOAT
-                FROM CTE_EQUIPES EQUIPES
-                LEFT JOIN MULHERES_50_69_ANOS MULHER ON MULHER.INE= EQUIPES.INE
-                LEFT JOIN EXAMES_SOLICITADOS ES ON ES.NU_INE_VINC_EQUIPE = EQUIPES.INE
-                LEFT JOIN EXAMES_AVALIADOS EA ON EA.NU_INE_VINC_EQUIPE = EQUIPES.INE;		
-            ELSE
-                RETURN QUERY
-                    WITH CTE_EQUIPES AS (
-                    SELECT NU_INE AS INE, NO_EQUIPE AS NOME_EQUIPE
-                    FROM TB_EQUIPE
-                    LEFT JOIN TB_TIPO_EQUIPE ON TP_EQUIPE = CO_SEQ_TIPO_EQUIPE
-                    WHERE ST_ATIVO = 1 AND NU_MS IN ('70', '76')
-                ),
-                MULHERES_50_69_ANOS AS (
-                    SELECT
-                    TACV.NU_INE_VINC_EQUIPE AS INE,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    ) AS TOTAL_MULHERES_COM_FCI,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '50 YEARS' AND INTERVAL '69 YEARS'
-                    ) AS MULHERES_50_69,
-                    COUNT(*) FILTER (
-                        WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                        AND TACV.ST_POSSUI_FCI = 1
-                        AND AGE(QUADRIMESTRE, TACV.DT_NASCIMENTO_CIDADAO) BETWEEN INTERVAL '50 YEARS' AND INTERVAL '69 YEARS'
-                        AND TACV.DT_ULTIMA_ATUALIZACAO_CIDADAO BETWEEN QUADRIMESTRE - INTERVAL '24 MONTH'
-                            AND QUADRIMESTRE
-                    ) AS MULHERES_50_69_ATUALIZADAS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                ),
-                EXAMES_SOLICITADOS AS (
-                    SELECT TACV.NU_INE_VINC_EQUIPE, COUNT(CO_SEQ_FAT_CIDADAO_PEC) AS TOTAL_EXAMES_SOLICITADOS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    INNER JOIN (
-                        SELECT CO_CIDADAO, CO_SEQ_FAT_CIDADAO_PEC
-                        FROM TB_FAT_CIDADAO_PEC
-                        WHERE CO_CIDADAO IS NOT NULL
-                    ) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                    INNER JOIN (
-                        SELECT * FROM TB_FAT_ATENDIMENTO_INDIVIDUAL
-                        WHERE CO_FAT_CIDADAO_PEC IS NOT NULL
-                    ) FAI ON FAI.CO_FAT_CIDADAO_PEC = CIDADAO.CO_SEQ_FAT_CIDADAO_PEC
-                    INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = FAI.CO_DIM_CBO_1
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND EXTRACT(YEAR FROM TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) -
-                        EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) BETWEEN 50 AND 69
-                    AND TDC.NU_CBO IN ('223505', '223565', '225130', '225142', '225170')
-                    AND TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') BETWEEN QUADRIMESTRE - INTERVAL '24 MONTHS' AND QUADRIMESTRE
-                    AND EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_SOLICITADOS), '|')) AS PROC
-                        WHERE PROC IN ('0204030188')
-                    )
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                ),
-                EXAMES_AVALIADOS AS (
-                    SELECT TACV.NU_INE_VINC_EQUIPE, COUNT(CO_SEQ_FAT_CIDADAO_PEC) AS TOTAL_EXAMES_AVALIADOS
-                    FROM TB_ACOMP_CIDADAOS_VINCULADOS TACV
-                    INNER JOIN (
-                        SELECT CO_CIDADAO, CO_SEQ_FAT_CIDADAO_PEC
-                        FROM TB_FAT_CIDADAO_PEC
-                        WHERE CO_CIDADAO IS NOT NULL
-                    ) CIDADAO ON CIDADAO.CO_CIDADAO = TACV.CO_CIDADAO
-                    INNER JOIN (
-                        SELECT * FROM TB_FAT_ATENDIMENTO_INDIVIDUAL
-                        WHERE CO_FAT_CIDADAO_PEC IS NOT NULL
-                    ) FAI ON FAI.CO_FAT_CIDADAO_PEC = CIDADAO.CO_SEQ_FAT_CIDADAO_PEC
-                    INNER JOIN TB_DIM_CBO TDC ON TDC.CO_SEQ_DIM_CBO = FAI.CO_DIM_CBO_1
-                    WHERE TACV.NO_SEXO_CIDADAO = 'FEMININO'
-                    AND TACV.ST_POSSUI_FCI = 1
-                    AND EXTRACT(YEAR FROM TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD')) -
-                        EXTRACT(YEAR FROM TACV.DT_NASCIMENTO_CIDADAO) BETWEEN 50 AND 69
-                    AND TDC.NU_CBO IN ('223505', '223565', '225130', '225142', '225170')
-                    AND TO_DATE(FAI.CO_DIM_TEMPO::TEXT, 'YYYYMMDD') BETWEEN QUADRIMESTRE - INTERVAL '24 MONTHS' AND QUADRIMESTRE
-                    AND EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_AVALIADOS), '|')) AS PROC
-                        WHERE PROC IN ('0204030188')
-                    )
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM UNNEST(STRING_TO_ARRAY(TRIM(BOTH '|' FROM FAI.DS_FILTRO_PROCED_SOLICITADOS), '|')) AS PROC
-                        WHERE PROC IN ('0204030188')
-                    )
-                    AND TACV.NU_INE_VINC_EQUIPE = P_EQUIPE	
-                    GROUP BY TACV.NU_INE_VINC_EQUIPE
-                )
-                SELECT
-                    EQUIPES.INE,
-                    EQUIPES.NOME_EQUIPE,
-                    SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0))::INTEGER,
-                    SUM(COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0))::INTEGER,
-                    SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0) + COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0))::INTEGER,
-                    SUM(COALESCE(MULHER.MULHERES_50_69_ATUALIZADAS, 0))::INTEGER,
-                    ROUND(
-                        (SUM(COALESCE(ES.TOTAL_EXAMES_SOLICITADOS, 0)::NUMERIC) + SUM(COALESCE(EA.TOTAL_EXAMES_AVALIADOS, 0)::NUMERIC)) * 0.2,
-                        --/NULLIF(SUM(COALESCE(MULHER.MULHERES_50_69_ATUALIZADAS, 0)), 0),
-                        2)::FLOAT
-                FROM CTE_EQUIPES EQUIPES
-                LEFT JOIN MULHERES_50_69_ANOS MULHER ON MULHER.INE = EQUIPES.INE
-                LEFT JOIN EXAMES_SOLICITADOS ES ON ES.NU_INE_VINC_EQUIPE = EQUIPES.INE
-                LEFT JOIN EXAMES_AVALIADOS EA ON EA.NU_INE_VINC_EQUIPE = EQUIPES.INE
-                WHERE EQUIPES.INE = P_EQUIPE
-                GROUP BY EQUIPES.INE, EQUIPES.NOME_EQUIPE, ES.TOTAL_EXAMES_SOLICITADOS, EA.TOTAL_EXAMES_AVALIADOS;
-            END IF;
-        END;
-        $$ LANGUAGE PLPGSQL;`
-    },
-
+   
     {
         name: 'SAUDE SEXUAL E REPRODUTIVA MULHERES DE 14 A 69 ANOS',
         definition: `CREATE OR REPLACE FUNCTION SAUDE_SEXUAL(
@@ -3572,6 +2785,298 @@ $$;`
         $$ LANGUAGE PLPGSQL;`
     },
 
+    {
+        name:"Desenvolvimento Infantil",
+        definition: `CREATE OR REPLACE FUNCTION desenv_infantil(
+                quadrimestre DATE,
+                p_equipe     VARCHAR DEFAULT NULL
+            )
+            RETURNS TABLE (
+                cod_cidadao                BIGINT,
+                cod_equipe                 TEXT,
+                nome_equpe				   TEXT,	
+                nu_cns                     TEXT,
+                nu_cpf                     TEXT,
+                nome_cidadao               TEXT,
+                dt_nascim                  TEXT,
+                nu_microarea               TEXT,	
+                indicador_a                INTEGER,
+                indicador_b                INTEGER,
+                indicador_c                INTEGER,
+                indicador_d                INTEGER,
+                indicador_e                INTEGER,
+                indicadores_alcancados INTEGER,
+                pontuacao                  INTEGER,
+                nota                       NUMERIC,
+                total_criancas             BIGINT,
+                total_pontuacao            BIGINT,
+                tipo_linha                 TEXT
+            )
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+            RETURN QUERY
+            WITH equipes AS (
+                SELECT 
+                    e.nu_ine AS ine,
+                    e.no_equipe AS nome_equipe
+                FROM tb_equipe e
+                LEFT JOIN tb_tipo_equipe te ON e.tp_equipe = te.co_seq_tipo_equipe
+                WHERE e.st_ativo = 1
+                AND te.nu_ms = '70'
+            ),
+            cidadao_base AS (
+                SELECT
+                    tfci.co_fat_cidadao_pec AS id_cidadao,
+                    tde.nu_ine AS equipe,
+                    tde.no_equipe as equipe_nome,
+                    tfci.nu_cns AS cns,
+                    TRIM(tfci.nu_cpf_cidadao) AS cpf,
+                    tfcp.no_cidadao,
+                    tfci.dt_nascimento::date AS dt_nasc,
+                    tfci.nu_micro_area AS micro_area,
+                    tfci.co_dim_tipo_saida_cadastro AS saida_cadastro,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY tfci.co_fat_cidadao_pec
+                        ORDER BY tfci.co_dim_tempo DESC
+                    ) AS ordem
+                FROM tb_fat_cad_individual tfci
+                LEFT JOIN tb_fat_cidadao_territorio tfct ON tfct.co_fat_cidadao_pec = tfci.co_fat_cidadao_pec
+                LEFT JOIN tb_fat_cidadao_pec tfcp ON tfcp.co_seq_fat_cidadao_pec = tfci.co_fat_cidadao_pec
+                LEFT JOIN tb_fat_cidadao tfc ON tfc.co_fat_cad_individual = tfci.co_seq_fat_cad_individual
+                LEFT JOIN tb_dim_equipe tde ON tde.co_seq_dim_equipe = tfci.co_dim_equipe
+                WHERE tfct.st_mudou_se = 0
+                AND tfct.st_vivo = 1
+                AND tfc.st_ficha_inativa = 0
+                AND tfci.dt_nascimento >= (quadrimestre - interval '24 months')::date
+                AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
+            ),
+            cidadao AS (
+                SELECT *
+                FROM cidadao_base
+                WHERE ordem = 1
+            ),
+            primeira_data AS (
+                SELECT
+                    ci.id_cidadao,
+                    CASE
+                        WHEN MIN(tfai.co_dim_tempo) FILTER (
+                            WHERE tfai.co_dim_tempo IS NOT NULL
+                            AND (TO_DATE(tfai.co_dim_tempo::TEXT,'YYYYMMDD') - ci.dt_nasc) BETWEEN 0 AND 30
+                            AND tdc.nu_cbo IN ('225142','225130','225170','223505','223565')
+                        ) IS NOT NULL THEN 1 ELSE 0
+                    END AS total
+                FROM tb_fat_atendimento_individual tfai
+                JOIN cidadao ci ON ci.id_cidadao = tfai.co_fat_cidadao_pec
+                LEFT JOIN tb_dim_cbo tdc ON tdc.co_seq_dim_cbo = tfai.co_dim_cbo_1
+                WHERE tfai.co_dim_tempo IS NOT NULL
+                GROUP BY ci.id_cidadao
+            ),
+            total_consultas AS (
+                SELECT
+                    ci.id_cidadao,
+                    COUNT(DISTINCT tfai.co_seq_fat_atd_ind) AS qtd_consultas
+                FROM tb_fat_atendimento_individual tfai
+                JOIN cidadao ci ON ci.id_cidadao = tfai.co_fat_cidadao_pec
+                LEFT JOIN tb_dim_cbo tdc ON tdc.co_seq_dim_cbo = tfai.co_dim_cbo_1
+                WHERE tfai.co_dim_tempo IS NOT NULL
+                AND tdc.nu_cbo IN ('225142','225130','225170','223505','223565')
+                GROUP BY ci.id_cidadao
+            ),
+            indicador_3 AS (
+                SELECT
+                    ci.id_cidadao,
+                    COUNT(DISTINCT tfai.co_seq_fat_atd_ind) AS total_c
+                FROM tb_fat_atendimento_individual tfai
+                JOIN cidadao ci ON ci.id_cidadao = tfai.co_fat_cidadao_pec
+                LEFT JOIN tb_dim_cbo tdc ON tdc.co_seq_dim_cbo = tfai.co_dim_cbo_1
+                WHERE tfai.nu_peso IS NOT NULL
+                AND tfai.nu_altura IS NOT NULL
+                AND tdc.nu_cbo IN ('225142','225130','225170','223505','223565','322205','322245')
+                GROUP BY ci.id_cidadao
+                HAVING COUNT(DISTINCT tfai.co_seq_fat_atd_ind) >= 9
+            ),
+            indicador_4 AS (
+                SELECT
+                    ci.id_cidadao,
+                    COUNT(DISTINCT tfvd.co_seq_fat_visita_domiciliar) AS qtd_visitas
+                FROM tb_fat_visita_domiciliar tfvd
+                JOIN cidadao ci ON ci.id_cidadao = tfvd.co_fat_cidadao_pec
+                LEFT JOIN tb_dim_cbo tdc ON tdc.co_seq_dim_cbo = tfvd.co_dim_cbo
+                WHERE tdc.nu_cbo LIKE '5151%'
+                GROUP BY ci.id_cidadao
+                HAVING MIN(TO_DATE(tfvd.co_dim_tempo::TEXT,'YYYYMMDD') - ci.dt_nasc) <= 30
+                AND COUNT(DISTINCT tfvd.co_seq_fat_visita_domiciliar) >= 2
+                AND (MAX(TO_DATE(tfvd.co_dim_tempo::TEXT,'YYYYMMDD')) - MIN(TO_DATE(tfvd.co_dim_tempo::TEXT,'YYYYMMDD'))) <= 180
+            ),
+            vacinacao AS (
+                SELECT 
+                    ci.id_cidadao,
+                    TO_DATE(tfvv.co_dim_tempo_vacina_aplicada::TEXT,'YYYYMMDD') AS dt_aplicacao,
+                    tdi.nu_identificador AS cod_vacina
+                FROM tb_fat_vacinacao tfv
+                JOIN tb_fat_vacinacao_vacina tfvv ON tfvv.co_fat_vacinacao = tfv.co_seq_fat_vacinacao
+                JOIN tb_dim_imunobiologico tdi ON tdi.co_seq_dim_imunobiologico = tfvv.co_dim_imunobiologico
+                JOIN tb_dim_dose_imunobiologico tddi ON tddi.co_seq_dim_dose_imunobiologico = tfvv.co_dim_dose_imunobiologico
+                JOIN cidadao ci ON ci.id_cidadao = tfv.co_fat_cidadao_pec
+                WHERE tdi.nu_identificador IN ('09','17','22','29','39','42','43','46','47','58','24','56','26','59','106','107')
+                AND tddi.sg_dose_imunobiologico <> 'REF'
+            ),
+            vacinacao_agg AS (
+                SELECT
+                    v.id_cidadao,
+                    COUNT(DISTINCT CASE WHEN v.cod_vacina IN ('09','17','29','39','42','43','46','47','58') THEN v.dt_aplicacao END) AS cnt_pentavalente,
+                    COUNT(DISTINCT CASE WHEN v.cod_vacina IN ('22','29','43','58') THEN v.dt_aplicacao END) AS cnt_vip,
+                    COUNT(DISTINCT CASE WHEN v.cod_vacina IN ('24','56') AND v.dt_aplicacao >= c.dt_nasc + interval '12 months' THEN v.dt_aplicacao END) AS cnt_scr_scrv,
+                    COUNT(DISTINCT CASE WHEN v.cod_vacina IN ('26','59','106','107') THEN v.dt_aplicacao END) AS cnt_pneumo
+                FROM vacinacao v
+                JOIN cidadao c ON c.id_cidadao = v.id_cidadao
+                GROUP BY v.id_cidadao
+            ),
+            indicador_5 AS (
+                SELECT
+                    va.id_cidadao,
+                    ((va.cnt_pentavalente >= 3)::int +
+                    (va.cnt_vip >= 3)::int +
+                    (va.cnt_scr_scrv >= 2)::int +
+                    (va.cnt_pneumo >= 2)::int) AS total_doses
+                FROM vacinacao_agg va
+            ),
+            resultado AS (
+                SELECT
+                    ci.id_cidadao,
+                    ci.equipe,
+                    ci.equipe_nome,
+                    ci.cns,
+                    ci.cpf,
+                    ci.no_cidadao,
+                    ci.dt_nasc,
+                    ci.micro_area,
+                    COALESCE(pd.total,0) AS indicador_a,
+                    COALESCE(tc.qtd_consultas,0) AS indicador_b,
+                    COALESCE(i3.total_c,0) AS indicador_c,
+                    COALESCE(i4.qtd_visitas,0) AS indicador_d,
+                    COALESCE(i5.total_doses,0) AS indicador_e,
+                    (CASE WHEN COALESCE(pd.total,0) > 0 THEN 1 ELSE 0 END) +
+                    (CASE WHEN COALESCE(tc.qtd_consultas,0) >= 9 THEN 1 ELSE 0 END) +
+                    (CASE WHEN COALESCE(i3.total_c,0) >= 9 THEN 1 ELSE 0 END) +
+                    (CASE WHEN COALESCE(i4.qtd_visitas,0) >= 2 THEN 1 ELSE 0 END) +
+                    (CASE WHEN COALESCE(i5.total_doses,0) >= 4 THEN 1 ELSE 0 END) AS qtd_indicadores_alcancados
+                FROM cidadao ci
+                LEFT JOIN primeira_data pd ON pd.id_cidadao = ci.id_cidadao
+                LEFT JOIN total_consultas tc ON tc.id_cidadao = ci.id_cidadao
+                LEFT JOIN indicador_3 i3 ON i3.id_cidadao = ci.id_cidadao
+                LEFT JOIN indicador_4 i4 ON i4.id_cidadao = ci.id_cidadao
+                LEFT JOIN indicador_5 i5 ON i5.id_cidadao = ci.id_cidadao
+                order by ci.micro_area
+            ),
+            agregado AS (
+                SELECT 
+                    COUNT(*) AS total_criancas,
+                    SUM(qtd_indicadores_alcancados) AS total_pontuacao,
+                    ROUND(((SUM(qtd_indicadores_alcancados)::NUMERIC * 20) / NULLIF(COUNT(*),0)), 2) AS nota
+                FROM resultado
+            )
+            SELECT
+                r.id_cidadao,
+                r.equipe::text,
+                r.equipe_nome::text,
+                CASE WHEN r.cns = '0' THEN '******' ELSE r.cns END::text,
+                CASE WHEN r.cpf = '0' THEN '******' ELSE r.cpf END::text,
+                r.no_cidadao::text,
+                TO_CHAR(r.dt_nasc,'DD/MM/YYYY'),
+                r.micro_area::text,
+                r.indicador_a,
+                r.indicador_b::integer,
+                r.indicador_c::integer,
+                r.indicador_d::integer,
+                r.indicador_e::integer,
+                r.qtd_indicadores_alcancados,
+                r.qtd_indicadores_alcancados * 20 AS pontuacao,
+                ROUND(a.nota,2) AS nota,
+                a.total_criancas,
+                a.total_pontuacao,
+                'detalhe' AS tipo_linha
+            FROM resultado r
+            CROSS JOIN agregado a
+            UNION ALL
+            SELECT
+                NULL::BIGINT,
+                NULL::TEXT,
+                NULL::TEXT,
+                'RESUMO'::TEXT,
+                NULL::TEXT,
+                NULL::TEXT,
+                NULL::TEXT,
+                NULL::TEXT,
+                NULL::INT,
+                NULL::INT,
+                NULL::INT,
+                NULL::INT,
+                NULL::INT,
+                NULL::INT,
+                NULL::INT,
+                ROUND(a.nota,2),
+                a.total_criancas,
+                a.total_pontuacao,
+                'resumo' AS tipo_linha
+            FROM agregado a;
+            END;
+            $$;`
+    },
+
+    { 
+        name: "Resumo Desenvolvimento Infantil",
+        definition: `CREATE OR REPLACE FUNCTION desenv_infantil_resumo(
+            p_quadrimestre DATE            
+        )
+        RETURNS TABLE (
+            cod_equipe TEXT,
+            nome_equipe TEXT,
+            total_criancas BIGINT,
+            total_indicador_a BIGINT,
+            total_indicador_b BIGINT,
+            total_indicador_c BIGINT,
+            total_indicador_d BIGINT,
+            total_indicador_e BIGINT,
+            qtde_indicadores_alcancados BIGINT,
+            total_pontuacao BIGINT,
+            nota_media NUMERIC
+        )
+        LANGUAGE sql
+        AS $$
+            WITH detalhes AS (
+                SELECT *
+                FROM desenv_infantil(p_quadrimestre, NULL)
+                WHERE tipo_linha = 'detalhe'
+            )
+            SELECT
+                cod_equipe,
+                nome_equpe,
+                COUNT(*) AS total_criancas,
+                SUM(CASE WHEN indicador_a > 0 THEN 1 ELSE 0 END) AS total_indicador_a,
+                SUM(CASE WHEN indicador_b >= 9 THEN 1 ELSE 0 END) AS total_indicador_b,
+                SUM(CASE WHEN indicador_c >= 9 THEN 1 ELSE 0 END) AS total_indicador_c,
+                SUM(CASE WHEN indicador_d >= 2 THEN 1 ELSE 0 END) AS total_indicador_d,
+                SUM(CASE WHEN indicador_e >= 4 THEN 1 ELSE 0 END) AS total_indicador_e,
+				 -- ✅ Total de indicadores alcançados pela equipe (de 0 a 5)
+			    (
+			        MAX(CASE WHEN indicador_a > 0 THEN 1 ELSE 0 END) +
+			        MAX(CASE WHEN indicador_b >= 9 THEN 1 ELSE 0 END) +
+			        MAX(CASE WHEN indicador_c >= 9 THEN 1 ELSE 0 END) +
+			        MAX(CASE WHEN indicador_d >= 2 THEN 1 ELSE 0 END) +
+			        MAX(CASE WHEN indicador_e >= 4 THEN 1 ELSE 0 END)
+			    ) AS total_indicadores_alcancados,
+                    --SUM(indicadores_alcancados) AS qtde_indicadores_alcancados,
+                SUM(pontuacao) AS total_pontuacao,
+                ROUND((SUM(pontuacao)::numeric/  NULLIF(COUNT(*),0)), 2) AS nota
+            FROM detalhes
+            GROUP BY cod_equipe, nome_equpe
+            ORDER BY nome_equpe asc;
+        $$;`
+    },
+
+
      /*--------------------------------------------------------*/ 
 
     /*-----------------EMULTI --------------------------------*/ 
@@ -3673,959 +3178,11 @@ $$;`
 
 
     /*-----------------HIPERTENSOS---------------------------*/
-    {
-        name: 'HAS Clinico',
-        definition: `create or replace function has_clinico(
-            p_equipe varchar default null)
-        returns table(has_clinico integer)
-        language plpgsql
-        as $$
-        begin
-            return query
-            SELECT count(*)::integer
-        FROM (
-            SELECT distinct            
-                fact.nuCns AS cns_cidadao,
-                fact.cpf AS cpf_cidadao
-            FROM (
-                SELECT
-                    tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                    tb_fat_cad_individual.nu_cns AS nuCns,
-                    tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                    tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                    cad_individual.no_mae_cidadao AS noNomeMae,
-                    tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                    tb_fat_cad_individual.co_dim_sexo AS sexo,
-                    tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                FROM
-                    tb_fat_cad_individual
-                JOIN tb_dim_tipo_saida_cadastro 
-                    ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                JOIN tb_cds_cad_individual cad_individual 
-                    ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                WHERE
-                    tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                    --AND (tb_fat_cad_individual.st_hipertensao_arterial = 1 or tb_fat_cad_individual.st_hipertensao_arterial is null)  -- Mantém a condição para hipertensos e não hipertensos
-                    AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                    AND EXISTS (
-                        SELECT 1
-                        FROM tb_fat_cidadao
-                        WHERE 
-                            tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                            AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                    )
-                    AND EXISTS (
-                        SELECT 1
-                        FROM tb_fat_atendimento_individual tfai 
-                        WHERE 
-                            tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                            AND (
-                                tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                OR tfai.ds_filtro_cids IN (
-                                    '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                    '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                    '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
-                                )
-                            )
-                    ) 
-                    AND tb_dim_tipo_saida_cadastro.nu_identificador = '-' --and tb_fat_cidadao_pec.st_faleceu = 0
-            ) AS fact
-            LEFT JOIN tb_fat_cidadao_pec 
-                ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-            JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc
-            WHERE 
-            (tde.nu_ine = p_equipe or p_equipe IS NULL) and  tb_fat_cidadao_pec.st_faleceu = 0
-            GROUP BY          
-                fact.nuCns, 
-                fact.cpf    
-        ) AS total;
-        end;
-        $$`
-    },
+ 
 
-    {
-        name: 'HAS Autorreferidos',
-        definition: `CREATE OR REPLACE FUNCTION has_autorreferidos(
-            p_equipe VARCHAR DEFAULT NULL
-        )
-        RETURNS TABLE (has_autorrefidos INTEGER)
-        LANGUAGE plpgsql
-        AS $$
-        BEGIN
-            RETURN QUERY
-            SELECT COUNT(*)::integer
-            FROM (
-                SELECT DISTINCT            
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao
-                FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        --cad_individual.no_mae_cidadao AS noNomeMae,
-                        --tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                        --tb_fat_cad_individual.co_dim_sexo AS sexo,
-                        tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in(395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                        AND tb_fat_cad_individual.st_hipertensao_arterial = 1
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                    OR tfai.ds_filtro_cids IN (
-                                        '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                        '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                        '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
-                                    )
-                                )
-                        )
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                    ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc
-                WHERE 
-                    (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-                GROUP BY          
-                    fact.nuCns, 
-                    fact.cpf    
-            ) AS autorreferidos;
-        END;
-        $$;
-`
-    },
-
-    {
-        name: 'HAS Sexo',
-        definition: `create or replace function has_sexo(
-            p_equipe varchar default null)
-        returns table(sexo varchar, total bigint)
-        language plpgsql
-        as $$
-        begin
-            return query
-                SELECT 
-                COALESCE(t1.sexo, t2.sexo) AS sexo,
-                COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0)::integer AS total_sexo
-            FROM (
-                -- Query 1
-                SELECT 
-                    teste.sexo, 
-                    COUNT(*) AS count_sexo
-                FROM (
-                    SELECT DISTINCT	            
-                        fact.nuCns AS cns_cidadao,
-                        fact.cpf AS cpf_cidadao,
-                        tds.ds_sexo AS sexo	            
-                    FROM (
-                        SELECT
-                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                            tb_fat_cad_individual.nu_cns AS nuCns,
-                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                            cad_individual.no_mae_cidadao AS noNomeMae,
-                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                            tb_fat_cad_individual.co_dim_sexo AS sexo,
-                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                        FROM
-                            tb_fat_cad_individual
-                        JOIN tb_dim_tipo_saida_cadastro 
-                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                        JOIN tb_cds_cad_individual cad_individual 
-                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                        WHERE
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                            AND tb_fat_cad_individual.st_hipertensao_arterial = 1
-                            AND tb_fat_cad_individual.st_ficha_inativa = 0
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_cidadao
-                                WHERE 
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            )
-                            AND NOT EXISTS (
-                                SELECT 1
-                                FROM tb_fat_atendimento_individual tfai 
-                                WHERE 
-                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                    AND (
-                                        tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                        OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                        OR tfai.ds_filtro_cids IN (
-                                            '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                            '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                            '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
-                                        )
-                                    )
-                            )
-                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                    ) AS fact
-                    LEFT JOIN tb_fat_cidadao_pec 
-                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                    JOIN tb_dim_equipe tde 
-                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-                    JOIN tb_dim_sexo tds 
-                        ON tds.co_seq_dim_sexo = fact.sexo
-                    JOIN tb_dim_faixa_etaria tdfe 
-                        ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                    WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-                    group by fact.nucns, fact.cpf, tds.ds_sexo
-                ) AS teste
-                GROUP BY teste.sexo
-            ) AS t1
-            FULL JOIN (
-                -- Query 2
-                SELECT 
-                    teste2.sexo, 
-                    COUNT(*) AS count_sexo
-                FROM (
-                    SELECT DISTINCT   
-                        fact.nuCns AS cns_cidadao,
-                        fact.cpf AS cpf_cidadao,           
-                        tds.ds_sexo AS sexo	           
-                    FROM (
-                        SELECT
-                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                            tb_fat_cad_individual.nu_cns AS nuCns,
-                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                            cad_individual.no_mae_cidadao AS noNomeMae,
-                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                            tb_fat_cad_individual.co_dim_sexo AS sexo,
-                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                        FROM
-                            tb_fat_cad_individual
-                        JOIN tb_dim_tipo_saida_cadastro 
-                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                        JOIN tb_cds_cad_individual cad_individual 
-                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                        WHERE
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                            AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_cidadao
-                                WHERE 
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            )
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_atendimento_individual tfai 
-                                WHERE 
-                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                    AND (
-                                        tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                        OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                        OR tfai.ds_filtro_cids IN (
-                                            '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                            '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                            '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
-                                        )
-                                    )
-                            ) 
-                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                    ) AS fact
-                    LEFT JOIN tb_fat_cidadao_pec 
-                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                    JOIN tb_dim_equipe tde 
-                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
-                    JOIN tb_dim_sexo tds 
-                        ON tds.co_seq_dim_sexo = fact.sexo	
-                    WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-                    group by fact.nucns, fact.cpf, tds.ds_sexo				
-                ) AS teste2
-                GROUP BY teste2.sexo
-            ) AS t2
-            ON t1.sexo = t2.sexo;
-        end;
-        $$`
-    },
-
-    {
-        name: 'HAS Faita Etaria',
-        definition: `create or replace function has_fx_etaria(
-            p_equipe varchar default null)
-        returns table (faixa_etaria varchar, total bigint)
-        language plpgsql
-        as $$
-        begin
-            return query
-                SELECT 
-                COALESCE(t1.idade, t2.idade) AS fx_etaria,
-                COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0) AS total_fx_etaria
-            FROM (
-                -- Query 1
-                SELECT 
-                    teste.idade, 
-                    COUNT(*) AS count_sexo
-                FROM (
-                    SELECT DISTINCT
-                        tb_fat_cidadao_pec.no_cidadao AS nome_cidadao,
-                        fact.nuCns AS cns_cidadao,
-                        fact.cpf AS cpf_cidadao,
-                        tdfe.ds_faixa_etaria AS idade
-                    FROM (
-                        SELECT
-                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                            tb_fat_cad_individual.nu_cns AS nuCns,
-                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                            cad_individual.no_mae_cidadao AS noNomeMae,
-                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                            tb_fat_cad_individual.co_dim_sexo AS sexo,
-                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                        FROM
-                            tb_fat_cad_individual
-                        JOIN tb_dim_tipo_saida_cadastro 
-                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                        JOIN tb_cds_cad_individual cad_individual 
-                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                        WHERE
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                            AND tb_fat_cad_individual.st_hipertensao_arterial = 1
-                            AND tb_fat_cad_individual.st_ficha_inativa = 0
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_cidadao
-                                WHERE 
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            )
-                            AND NOT EXISTS (
-                                SELECT 1
-                                FROM tb_fat_atendimento_individual tfai 
-                                WHERE 
-                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                    AND (
-                                        tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                        OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                        OR tfai.ds_filtro_cids IN (
-                                            '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                            '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                            '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
-                                        )
-                                    )
-                            )
-                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                    ) AS fact
-                    LEFT JOIN tb_fat_cidadao_pec 
-                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                    JOIN tb_dim_equipe tde 
-                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-                    JOIN tb_dim_sexo tds 
-                        ON tds.co_seq_dim_sexo = fact.sexo
-                    JOIN tb_dim_faixa_etaria tdfe 
-                        ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                    WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
-                ) AS teste
-                GROUP BY teste.idade
-            ) AS t1
-            FULL JOIN (
-                -- Query 2
-                SELECT 
-                    teste2.idade, 
-                    COUNT(*) AS count_sexo
-                FROM (
-                    SELECT DISTINCT
-                        fact.fciCidadaoPec AS fciCidadaoPec,    
-                        fact.nuCns AS cns_cidadao,
-                        fact.cpf AS cpf_cidadao,
-                        tdfe.ds_faixa_etaria AS idade	            
-                    FROM (
-                        SELECT
-                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                            tb_fat_cad_individual.nu_cns AS nuCns,
-                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                            cad_individual.no_mae_cidadao AS noNomeMae,
-                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                            tb_fat_cad_individual.co_dim_sexo AS sexo,
-                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                        FROM
-                            tb_fat_cad_individual
-                        JOIN tb_dim_tipo_saida_cadastro 
-                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                        JOIN tb_cds_cad_individual cad_individual 
-                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                        WHERE
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945) --or tb_fat_cad_individual.co_dim_cbo = 468 or tb_fat_cad_individual.co_dim_cbo = 945
-                            AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_cidadao
-                                WHERE 
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            )
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_atendimento_individual tfai 
-                                WHERE 
-                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                    AND (
-                                        tfai.ds_filtro_ciaps LIKE '%|ABP005|%' 
-                                        OR tfai.ds_filtro_ciaps IN ('|K86|', '|K87|') 
-                                        OR tfai.ds_filtro_cids IN (
-                                            '|I10|', '|I11|', '|I110|', '|I119|', '|I12Z|', '|I120|', '|I129|', '|I13|', '|I130|',
-                                            '|I131|', '|I132|', '|I139|', '|I15|', '|I150|', '|I151|', '|I152|', '|I158|', '|I159|',
-                                            '|O10|', '|O100|', '|O101|', '|O102|', '|O103|', '|O104|', '|O109|', '|O11|'
-                                        )
-                                    )
-                            ) 
-                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                    ) AS fact
-                    LEFT JOIN tb_fat_cidadao_pec 
-                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                    JOIN tb_dim_equipe tde 
-                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc	
-                    JOIN tb_dim_faixa_etaria tdfe 
-                        ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                    WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
-                ) AS teste2
-                GROUP BY teste2.idade
-            ) AS t2
-            ON t1.idade= t2.idade;	
-        end;
-        $$`
-    },
-
-    {
-        name: 'Atendimento HAS',
-        definition: `create or replace function hipertensos_atendidos(
-        p_equipe varchar default null)
-        --p_mes integer default null,
-        --p_ano integer default null)
-    returns table(total integer)
-    language plpgsql
-    as $$
-    begin
-        return query
-        select count(*)::integer from (select tfcp.no_cidadao, tfcp.nu_cns, tfcp.nu_cpf_cidadao, tfcp.co_dim_tempo_nascimento,
-        tfccf.co_dim_tempo_has as dt_atendimento, count(tfccf.co_dim_tempo_has) from tb_fat_consolidado_cidadao_fai tfccf
-        left join tb_fat_cidadao_pec tfcp on tfcp.co_seq_fat_cidadao_pec = tfccf.co_fat_cidadao_pec 
-        left join tb_dim_equipe tde on tde.co_seq_dim_equipe = tfcp.co_dim_equipe_vinc
-        where AGE(CURRENT_DATE, to_date(tfccf.co_dim_tempo_has::text, 'YYYYMMDD')) <= INTERVAL '12 MONTH' --and tde.nu_ine ='0000041653'
-        and tfcp.st_faleceu = 0
-        AND (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-        --AND (p_mes IS NULL OR EXTRACT(MONTH FROM to_date(tfccf.co_dim_tempo_has::text, 'YYYYMMDD')) = p_mes)
-        --AND (p_ano IS NULL OR EXTRACT(YEAR FROM to_date(tfccf.co_dim_tempo_has::text, 'YYYYMMDD')) = p_ano)
-        group by tfcp.no_cidadao, tfcp.nu_cns, tfcp.nu_cpf_cidadao, tfcp.co_dim_tempo_nascimento, tfccf.co_dim_tempo_has
-        having count(tfccf.co_dim_tempo_has) >= 1
-        order by tfcp.no_cidadao  asc 
-        ) as has_atendidos;
-    end;
-    $$`
-    },
-
-    /*--------------DIABETICOS-------------------------------*/
-    {
-        name: 'Diabeticos Atendidos',
-        definition: `CREATE OR REPLACE FUNCTION diabeticos_atendidos(
-        p_equipe varchar default null
-        )	
-    RETURNS TABLE (diabetico_atendidos INTEGER)
-    LANGUAGE plpgsql
-    AS $$
-    BEGIN   
-        -- Contar os atendimentos nos últimos 12 meses
-        RETURN QUERY
-        SELECT COUNT(*)::INTEGER 
-        FROM tb_fat_atendimento_individual tfai
-        INNER JOIN tb_dim_equipe tde 
-            ON tde.co_seq_dim_equipe = tfai.co_dim_equipe_1 
-        WHERE  AGE(CURRENT_DATE, to_date(tfai.co_dim_tempo::text, 'YYYYMMDD')) <= INTERVAL '12 MONTH' 
-            ---to_date(tfai.co_dim_tempo::text, 'YYYYMMDD') >= (v_data - INTERVAL '12 MONTH')
-        --AND to_date(tfai.co_dim_tempo::text, 'YYYYMMDD') <= v_data
-        AND (tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-            OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-            OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                '|O242|','|O243|', '|P702|'))
-        -- Condição da equipe
-        AND (p_equipe IS NULL OR tde.nu_ine = p_equipe);
-        --AND (p_mes IS NULL OR EXTRACT(MONTH FROM TO_DATE(tfai.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_mes)
-        --AND (p_ano IS NULL OR EXTRACT(YEAR FROM TO_DATE(tfai.co_dim_tempo::TEXT, 'YYYYMMDD')) = p_ano);
-    END;
-    $$;`
-    },
-
-    {   name: 'Diabeticos Clinicos',
-        definition: `create or replace function diabeticos_clinico(
-                p_equipe varchar default null)
-            returns table(diabetico_clinico integer)
-            language plpgsql
-            as $$
-            begin
-                return query
-                SELECT count(*)::integer
-            FROM (
-                SELECT distinct            
-                    fact.nuCns AS cns_cidadao,
-                    fact.cpf AS cpf_cidadao
-                FROM (
-                    SELECT
-                        tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                        tb_fat_cad_individual.nu_cns AS nuCns,
-                        tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                        tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                        cad_individual.no_mae_cidadao AS noNomeMae,
-                        tb_fat_cad_individual.dt_nascimento AS dtNascimento    
-                    FROM
-                        tb_fat_cad_individual
-                    JOIN tb_dim_tipo_saida_cadastro 
-                        ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                    JOIN tb_cds_cad_individual cad_individual 
-                        ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                    WHERE
-                        tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
-                        --AND (tb_fat_cad_individual.st_hipertensao_arterial = 1 or tb_fat_cad_individual.st_hipertensao_arterial is null)  -- Mantém a condição para hipertensos e não hipertensos
-                        AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_cidadao
-                            WHERE 
-                                tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                        )
-                        AND EXISTS (
-                            SELECT 1
-                            FROM tb_fat_atendimento_individual tfai 
-                            WHERE 
-                                tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                AND (
-                                    tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                                            OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                                    '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                                    '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                                    '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                                    '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                                    '|O242|','|O243|', '|P702|')
-                                )
-                        ) 
-                        AND tb_dim_tipo_saida_cadastro.nu_identificador = '-' --and tb_fat_cidadao_pec.st_faleceu = 0
-                ) AS fact
-                LEFT JOIN tb_fat_cidadao_pec 
-                    ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                JOIN tb_dim_equipe tde 
-                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc
-                WHERE 
-                (tde.nu_ine = p_equipe or p_equipe IS NULL) and  tb_fat_cidadao_pec.st_faleceu = 0
-                GROUP BY  
-                    fact.nuCns, 
-                    fact.cpf 
-
-            ) AS total;
-            end;
-            $$`
-    },
-
-    {   name: 'Diabeticos Autorreferidos',
-        definition: `CREATE OR REPLACE FUNCTION diabeticos_autorreferidos(
-                p_equipe VARCHAR DEFAULT NULL
-            )
-            RETURNS TABLE (diabetico_autorrefidos INTEGER)
-            LANGUAGE plpgsql
-            AS $$
-            BEGIN
-                RETURN QUERY
-                SELECT COUNT(*)::integer
-                FROM (
-                    SELECT DISTINCT
-                        fact.nuCns AS cns_cidadao,
-                        fact.cpf AS cpf_cidadao
-                    FROM (
-                        SELECT
-                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                            tb_fat_cad_individual.nu_cns AS nuCns,
-                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                            cad_individual.no_mae_cidadao AS noNomeMae,
-                            tb_fat_cad_individual.dt_nascimento AS dtNascimento
-                        FROM
-                            tb_fat_cad_individual
-                        JOIN tb_dim_tipo_saida_cadastro 
-                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                        JOIN tb_cds_cad_individual cad_individual 
-                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                        WHERE
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
-                            AND tb_fat_cad_individual.st_diabete = 1
-                            AND tb_fat_cad_individual.st_ficha_inativa = 0
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_cidadao
-                                WHERE 
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            )
-                            AND NOT EXISTS (
-                                SELECT 1
-                                FROM tb_fat_atendimento_individual tfai 
-                                WHERE 
-                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                    AND (
-                                        tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                                    OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                                    '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                                    '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                                    '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                                    '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                                    '|O242|','|O243|', '|P702|')
-                                    )
-                            )
-                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                    ) AS fact
-                    LEFT JOIN tb_fat_cidadao_pec 
-                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                    JOIN tb_dim_equipe tde 
-                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-                    WHERE 
-                        (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-                    GROUP BY  
-                        fact.nuCns, 
-                        fact.cpf
-                ) AS autorreferidos;
-            END;
-            $$;`
-    },
-
-    {   name: 'Diabeticos Faixa Etaria',
-        definition: `create or replace function diabeticos_fx_etaria(
-                p_equipe varchar default null)
-            returns table (faixa_etaria varchar, total bigint)
-            language plpgsql
-            as $$
-            begin
-                return query
-                    SELECT 
-                    COALESCE(t1.idade, t2.idade) AS fx_etaria,
-                    COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0) AS total_fx_etaria
-                FROM (
-                    -- Query 1
-                    SELECT 
-                        teste.idade, 
-                        COUNT(*) AS count_sexo
-                    FROM (
-                        SELECT DISTINCT	            
-                            fact.nuCns AS cns_cidadao,
-                            fact.cpf AS cpf_cidadao,	            
-                            tdfe.ds_faixa_etaria AS idade
-                        FROM (
-                            SELECT
-                                tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                                tb_fat_cad_individual.nu_cns AS nuCns,
-                                tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                                tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                                cad_individual.no_mae_cidadao AS noNomeMae,
-                                tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                                tb_fat_cad_individual.co_dim_sexo AS sexo,
-                                tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                            FROM
-                                tb_fat_cad_individual
-                            JOIN tb_dim_tipo_saida_cadastro 
-                                ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                            JOIN tb_cds_cad_individual cad_individual 
-                                ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                            WHERE
-                                tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
-                                AND tb_fat_cad_individual.st_diabete = 1
-                                AND tb_fat_cad_individual.st_ficha_inativa = 0
-                                AND EXISTS (
-                                    SELECT 1
-                                    FROM tb_fat_cidadao
-                                    WHERE 
-                                        tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                        AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                        AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                )
-                                AND NOT EXISTS (
-                                    SELECT 1
-                                    FROM tb_fat_atendimento_individual tfai 
-                                    WHERE 
-                                        tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                        AND (
-                                            tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                                    OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                                    '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                                    '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                                    '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                                    '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                                    '|O242|','|O243|', '|P702|'
-                                            )
-                                        )
-                                )
-                                AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                        ) AS fact
-                        LEFT JOIN tb_fat_cidadao_pec 
-                            ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                        JOIN tb_dim_equipe tde 
-                            ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc
-                        JOIN tb_dim_faixa_etaria tdfe 
-                            ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                        WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
-                    ) AS teste
-                    GROUP BY teste.idade
-                ) AS t1
-                FULL JOIN (
-                    -- Query 2
-                    SELECT 
-                        teste2.idade, 
-                        COUNT(*) AS count_sexo
-                    FROM (
-                        SELECT DISTINCT	                
-                            fact.nuCns AS cns_cidadao,
-                            fact.cpf AS cpf_cidadao,
-                            tdfe.ds_faixa_etaria AS idade	            
-                        FROM (
-                            SELECT
-                                tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                                tb_fat_cad_individual.nu_cns AS nuCns,
-                                tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                                tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                                cad_individual.no_mae_cidadao AS noNomeMae,
-                                tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                                tb_fat_cad_individual.co_dim_sexo AS sexo,
-                                tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                            FROM
-                                tb_fat_cad_individual
-                            JOIN tb_dim_tipo_saida_cadastro 
-                                ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                            JOIN tb_cds_cad_individual cad_individual 
-                                ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                            WHERE
-                                tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
-                                AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                                AND EXISTS (
-                                    SELECT 1
-                                    FROM tb_fat_cidadao
-                                    WHERE 
-                                        tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                        AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                        AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                )
-                                AND EXISTS (
-                                    SELECT 1
-                                    FROM tb_fat_atendimento_individual tfai 
-                                    WHERE 
-                                        tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                        AND (	                             
-                                            tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                                    OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                                    OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                                    '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                                    '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                                    '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                                    '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                                    '|O242|','|O243|', '|P702|'
-                                            )
-                                        )
-                                ) 
-                                AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                        ) AS fact
-                        LEFT JOIN tb_fat_cidadao_pec 
-                            ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                        JOIN tb_dim_equipe tde 
-                            ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc	 
-                        JOIN tb_dim_faixa_etaria tdfe 
-                            ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                        WHERE  (tde.nu_ine = p_equipe or p_equipe IS NULL)
-                    ) AS teste2
-                    GROUP BY teste2.idade
-                ) AS t2
-                ON t1.idade= t2.idade;	
-            end;
-            $$`
-    },
-
-    {
-        name: 'Diabeticos Sexo',
-        definition: `create or replace function diabeticos_sexo(
-            p_equipe varchar default null)
-        returns table(sexo varchar, total bigint)
-        language plpgsql
-        as $$
-        begin
-            return query
-                SELECT 
-                COALESCE(t1.sexo, t2.sexo) AS sexo,
-                COALESCE(t1.count_sexo, 0) + COALESCE(t2.count_sexo, 0)::integer AS total_sexo
-            FROM (
-                -- Query 1
-                SELECT 
-                    teste.sexo, 
-                    COUNT(*) AS count_sexo
-                FROM (
-                    SELECT DISTINCT
-                        fact.nuCns AS cns_cidadao,
-                        fact.cpf AS cpf_cidadao,	            
-                        tds.ds_sexo AS sexo	            
-                    FROM (
-                        SELECT
-                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                            tb_fat_cad_individual.nu_cns AS nuCns,
-                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                            tb_fat_cad_individual.co_dim_profissional AS coDimProf,
-                            cad_individual.no_mae_cidadao AS noNomeMae,
-                            tb_fat_cad_individual.dt_nascimento AS dtNascimento,
-                            tb_fat_cad_individual.co_dim_sexo AS sexo,
-                            tb_fat_cad_individual.co_dim_faixa_etaria AS idade
-                        FROM
-                            tb_fat_cad_individual
-                        JOIN tb_dim_tipo_saida_cadastro 
-                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                        JOIN tb_cds_cad_individual cad_individual 
-                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                        WHERE
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
-                            AND tb_fat_cad_individual.st_diabete = 1
-                            AND tb_fat_cad_individual.st_ficha_inativa = 0
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_cidadao
-                                WHERE 
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            )
-                            AND NOT EXISTS (
-                                SELECT 1
-                                FROM tb_fat_atendimento_individual tfai 
-                                WHERE 
-                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                    AND (
-                                        tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                                OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                                OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                                '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                                '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                                '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                                '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                                '|O242|','|O243|', '|P702|'
-                                        )
-                                    )
-                            )
-                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                    ) AS fact
-                    LEFT JOIN tb_fat_cidadao_pec 
-                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                    JOIN tb_dim_equipe tde 
-                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc 
-                    JOIN tb_dim_sexo tds 
-                        ON tds.co_seq_dim_sexo = fact.sexo
-                    JOIN tb_dim_faixa_etaria tdfe 
-                        ON tdfe.co_seq_dim_faixa_etaria = fact.idade
-                    WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-                ) AS teste
-                GROUP BY teste.sexo
-            ) AS t1
-            FULL JOIN (
-                -- Query 2
-                SELECT 
-                    teste2.sexo, 
-                    COUNT(*) AS count_sexo
-                FROM (
-                    SELECT DISTINCT	                
-                        fact.nuCns AS cns_cidadao,
-                        fact.cpf AS cpf_cidadao,	            
-                        tds.ds_sexo AS sexo
-                    FROM (
-                        SELECT
-                            tb_fat_cad_individual.co_fat_cidadao_pec AS fciCidadaoPec,
-                            tb_fat_cad_individual.nu_cns AS nuCns,
-                            tb_fat_cad_individual.nu_cpf_cidadao AS cpf,
-                            tb_fat_cad_individual.co_dim_sexo AS sexo
-                        FROM
-                            tb_fat_cad_individual
-                        JOIN tb_dim_tipo_saida_cadastro 
-                            ON tb_fat_cad_individual.co_dim_tipo_saida_cadastro = tb_dim_tipo_saida_cadastro.co_seq_dim_tipo_saida_cadastro
-                        JOIN tb_cds_cad_individual cad_individual 
-                            ON cad_individual.co_unico_ficha = tb_fat_cad_individual.nu_uuid_ficha
-                        WHERE
-                            tb_fat_cad_individual.co_dim_cbo in (395, 468, 945)
-                            AND tb_fat_cad_individual.st_ficha_inativa = 0 
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_cidadao
-                                WHERE 
-                                    tb_fat_cidadao.co_fat_cad_individual = tb_fat_cad_individual.co_seq_fat_cad_individual
-                                    AND tb_fat_cidadao.co_dim_tempo_valdd_unidd_saud > TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                                    AND tb_fat_cidadao.co_dim_tempo <= TO_CHAR(CURRENT_DATE, 'YYYYMMDD')::INTEGER
-                            )
-                            AND EXISTS (
-                                SELECT 1
-                                FROM tb_fat_atendimento_individual tfai 
-                                WHERE 
-                                    tfai.co_fat_cidadao_pec = tb_fat_cad_individual.co_fat_cidadao_pec
-                                    AND (
-                                        tfai.ds_filtro_ciaps LIKE '%|ABP006|%' 
-                                OR tfai.ds_filtro_ciaps IN ('|T89|', '|T90|') 
-                                OR tfai.ds_filtro_cids IN ('|E10|', '|E100|', '|E101|', '|E102|', '|E103|', '|E104|', '|E105|', '|E106|', '|E107|', 
-                                '|E108|', 'E109|', '|E11|', '|E110|', '|E111|', '|E112|', '|E113|', '|E114|', '|E115|', '|E116|', '|E117|', '|E118|',
-                                '|E119|', '|E12|', '|E120|', '|E121|', '|E122|', '|E123|', '|E124|', '|E125|', '|E126|', '|E127|', '|E128|', '|E129|',
-                                '|E13|', '|E130|', '|E131|', '|E132|', '|E133|', '|E134|', '|E135|', '|E136|', '|E137|', '|E138|', '|E139|', '|E14|',
-                                '|E140|', '|E141|', '|E142|', '|E143|', '|E144|', '|E145|', '|E146|', '|E147|', '|E148|', '|E149|', '|O240|', '|O241|',
-                                '|O242|','|O243|', '|P702|'
-                                        )
-                                    )
-                            ) 
-                            AND tb_dim_tipo_saida_cadastro.nu_identificador = '-'
-                    ) AS fact
-                    LEFT JOIN tb_fat_cidadao_pec 
-                        ON fact.fciCidadaoPec = tb_fat_cidadao_pec.co_seq_fat_cidadao_pec
-                    JOIN tb_dim_equipe tde 
-                        ON tde.co_seq_dim_equipe = tb_fat_cidadao_pec.co_dim_equipe_vinc  
-                    JOIN tb_dim_sexo tds 
-                        ON tds.co_seq_dim_sexo = fact.sexo
-                    WHERE (p_equipe IS NULL OR tde.nu_ine = p_equipe)
-                ) AS teste2
-                GROUP BY teste2.sexo
-            ) AS t2
-            ON t1.sexo = t2.sexo;
-        end;
-        $$`
-    },
-
+     
     /*-------------------------------------------------------*/
+
     /*------------------- GESTANTES ------------------------*/
     {
         name: 'PRENATAL ODONTOLOGICO',
