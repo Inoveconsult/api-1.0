@@ -218,7 +218,25 @@ class apsRepository extends baseRopository{
       } catch (error) {
         throw error
       }
-    }   
+    }
+    
+    async saudeDoIdoso (p1, p2) {
+      try {
+        const result  = await super.getIndicadoresQuadrimestres('saude_idoso', p1, p2);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    async resumoSaudeIdoso (p1) {
+      try {
+        const result = await super.getResumido('resumo_saude_idoso', p1);
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
   
 };
 

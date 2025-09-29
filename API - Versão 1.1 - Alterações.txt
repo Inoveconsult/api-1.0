@@ -9,5 +9,5 @@ API - Versão 1.1
 * Função Resumo Desenvolvimento Infantil;
 * Funções do Componente Qualidade de Odontologia;
 * Criadas novas rotas - Saude da Criança e Resumo Saúde da Criança;
-
+* Criadas novas rotas - Saude do Idoso e Resumo Saúde do Idoso;
 

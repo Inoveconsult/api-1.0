@@ -310,5 +310,39 @@ atencaobasica.get('/resumo_saude_crianca', async (req, res) => {
   }
 })
 
+atencaobasica.get('/saude_idoso', async (req, res) => {
+  let {quadrimestre, equipe} = req.query;
+  if (!quadrimestre) {
+    res.status(400).send({error:'Informe o Parâmetro Quadrimestre.'});
+    return;
+  }
+  if (!equipe) {
+    equipe = null
+  }
+  try {
+    const result = await new apsRepository().saudeDoIdoso(quadrimestre, equipe);
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({error: 'Erro interno no servidor.'});
+  }
+})
+
+atencaobasica.get('/resumo_saude_idoso', async (req, res) => {
+  let {quadrimestre, equipe } = req.query;
+  if (!quadrimestre) {
+    res.status(400).send({error:'Informe o Parâmetro Quadrimestre.'});
+    return;
+  }
+  if (!equipe) {
+    equipe = null
+  }
+  try {
+    const result = await new apsRepository().resumoSaudeIdoso(quadrimestre, equipe);
+    res.status(200).send(result);    
+  } catch (error) {
+    res.status(500).send({error: 'Erro interno no servidor.'});    
+  }
+})
+
 
 export default atencaobasica;

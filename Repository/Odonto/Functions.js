@@ -798,7 +798,7 @@ const functions = [
             order by total desc
             limit 10;
     end;
-    $$;`
+        $$;`
     },
 
     {
@@ -3023,6 +3023,293 @@ END;
             FROM agregado a;
             END;
             $$;`
+    },
+
+    {   
+        name: "SAÚDE DO IDOSO",
+        definition: `create or replace function SAUDE_IDOSO (
+        QUADRIMESTRE DATE,
+        P_EQUIPE TEXT default null
+        )
+        returns TABLE(
+            cod_cidadao 			bigint,
+            ine_equipe 				text,
+            nome_equipe 			text,
+            nu_cns 					text,
+            nu_cpf 					text,
+            nome_cidadao 			text,
+            dt_nascim 				text,
+            nu_microarea 			text,
+            indicador_a 			integer,
+            indicador_b 			integer,
+            indicador_c 			integer,
+            indicador_d 			integer,
+            indicadores_alcancados  integer,
+            pontuacao 				integer,
+            notas 					numeric,
+            total_idosos 			integer,
+            total_pontuacao 		integer,		
+            resumo 					text
+            )
+        language plpgsql 
+        as $$
+        begin
+            return query
+            with equipes AS (
+                SELECT 
+                    e.nu_ine AS ine,
+                    e.no_equipe AS nome_equipe
+                FROM tb_equipe e
+                LEFT JOIN tb_tipo_equipe te ON e.tp_equipe = te.co_seq_tipo_equipe
+                WHERE e.st_ativo = 1
+                AND te.nu_ms = '70'
+                ),
+    cidadao_base as (
+                SELECT
+                    tfci.co_fat_cidadao_pec AS id_cidadao,
+                    tde.nu_ine AS equipe,
+                    tde.no_equipe as equipe_nome,
+                    tfci.nu_cns AS cns,
+                    TRIM(tfci.nu_cpf_cidadao) AS cpf,
+                    tfcp.no_cidadao,
+                    tfci.dt_nascimento::date AS dt_nasc,
+                    tfci.nu_micro_area AS micro_area,
+                    tfci.co_dim_tipo_saida_cadastro AS saida_cadastro,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY tfci.co_fat_cidadao_pec
+                        ORDER BY tfci.co_dim_tempo DESC
+                    ) AS ordem
+                FROM tb_fat_cad_individual tfci
+                LEFT JOIN tb_fat_cidadao_territorio tfct ON tfct.co_fat_cidadao_pec = tfci.co_fat_cidadao_pec
+                LEFT JOIN tb_fat_cidadao_pec tfcp ON tfcp.co_seq_fat_cidadao_pec = tfci.co_fat_cidadao_pec
+                LEFT JOIN tb_fat_cidadao tfc ON tfc.co_fat_cad_individual = tfci.co_seq_fat_cad_individual
+                LEFT JOIN tb_dim_equipe tde ON tde.co_seq_dim_equipe = tfci.co_dim_equipe
+                JOIN tb_equipe e
+                    ON e.nu_ine = tde.nu_ine
+                    AND e.st_ativo = 1            -- ✅ só equipes ativas
+                JOIN tb_tipo_equipe te
+                    ON te.co_seq_tipo_equipe = e.tp_equipe
+                    AND te.nu_ms = '70'           -- ✅ apenas tipo MS = 70
+                WHERE tfct.st_mudou_se = 0
+                AND tfct.st_vivo = 1
+                AND tfc.st_ficha_inativa = 0
+                AND EXTRACT(YEAR FROM age(quadrimestre, tfci.dt_nascimento)) >= 60
+                AND (p_equipe IS NULL OR tde.nu_ine = p_equipe) --p_equipe)
+            ),
+    cidadao as (
+        SELECT *
+                FROM cidadao_base
+                WHERE ordem = 1
+                ),
+            indicador_1 as (
+            -- Pelo 01 (uma) consulta presencial ou remota por profissional médica(o) ou
+            --enfermeira(o) realizada nos últimos 12 meses.            
+                select 
+                ci.id_cidadao  as id_cidadao,
+                count(distinct tfai.co_seq_fat_atd_ind) as qtde_consultas
+                from tb_fat_atendimento_individual tfai 
+                left join cidadao ci 
+                    on ci.id_cidadao = tfai.co_fat_cidadao_pec
+                left join tb_dim_cbo tdc on tdc.co_seq_dim_cbo = tfai.co_dim_cbo_1
+                where 
+                tfai.co_dim_tempo is not null
+                and extract(year from age(quadrimestre, ci.dt_nasc)) >= 60
+                and tdc.nu_cbo SIMILAR TO '(2251|2252|2253|2231|2235)%'
+                and to_date(tfai.co_dim_tempo::text, 'YYYYMMDD') >= (quadrimestre - interval '12 months')
+                group by ci.id_cidadao
+                ),
+            indicador_2 as (
+            --Pelo menos 01 (um) registro simultâneo (no mesmo dia) de peso e altura para avaliação
+            --antropométrica nos últimos 12 meses.
+                select 
+                ci.id_cidadao,
+                count(distinct tfai.co_seq_fat_atd_ind) as qtde_antropometria
+                from tb_fat_atendimento_individual tfai 
+                left join cidadao ci 
+                    on ci.id_cidadao = tfai.co_fat_cidadao_pec
+                left join tb_dim_cbo tdc on tdc.co_seq_dim_cbo = tfai.co_dim_cbo_1
+                where 
+                tfai.co_dim_tempo is not null
+                and (tfai.nu_peso is not null and tfai.nu_altura is not null)
+                and extract(year from age(quadrimestre, ci.dt_nasc)) >= 60
+                and tdc.nu_cbo SIMILAR TO '(2251|2252|2253|2231|2235|32222|51510)%'
+                and to_date(tfai.co_dim_tempo::text, 'YYYYMMDD') >= (quadrimestre - interval '12 months')
+                group by ci.id_cidadao
+                ),
+            indicador_3 as (
+            --Pelo menos 02 (duas) visitas domiciliares realizadas por ACS/TACS, com intervalo mínimo de 30 (trinta)
+            --dias entre as visitas, realizadas nos últimos 12 meses.
+                WITH visitas_filtradas AS (
+                    SELECT
+                        ci.id_cidadao,
+                        to_date(tfvd.co_dim_tempo::text, 'YYYYMMDD') AS dt_visita
+                    FROM tb_fat_visita_domiciliar tfvd
+                    LEFT JOIN cidadao ci
+                        ON ci.id_cidadao = tfvd.co_fat_cidadao_pec
+                    LEFT JOIN tb_dim_cbo tdc
+                        ON tdc.co_seq_dim_cbo = tfvd.co_dim_cbo
+                    WHERE tfvd.co_dim_tempo IS NOT NULL
+                    AND to_date(tfvd.co_dim_tempo::text, 'YYYYMMDD') 
+                            >= (quadrimestre - interval '12 months')
+                    AND tdc.nu_cbo SIMILAR TO '(322255|515105)%'
+                )
+                SELECT
+                    v.id_cidadao,
+                    COUNT(*) AS qtde_visitas        -- ✅ quantidade real de visitas
+                FROM visitas_filtradas v
+                GROUP BY v.id_cidadao
+                HAVING
+                    COUNT(*) >= 2                  -- pelo menos 2 visitas
+                    AND (MAX(v.dt_visita) - MIN(v.dt_visita)) >= 30  -- intervalo mínimo em dias
+                ),
+            indicador_4 as (
+            --Ter registro de 01 (uma) dose da vacina contra influenza, nos últimos 12 meses.
+                SELECT 
+                    ci.id_cidadao,
+                    COUNT(DISTINCT tfv.co_seq_fat_vacinacao) AS qtde_doses
+                FROM tb_fat_vacinacao tfv
+                JOIN tb_fat_vacinacao_vacina tfvv 
+                    ON tfvv.co_fat_vacinacao = tfv.co_seq_fat_vacinacao
+                JOIN tb_dim_imunobiologico tdi 
+                    ON tdi.co_seq_dim_imunobiologico = tfvv.co_dim_imunobiologico
+                JOIN tb_dim_dose_imunobiologico tddi 
+                    ON tddi.co_seq_dim_dose_imunobiologico = tfvv.co_dim_dose_imunobiologico
+                JOIN cidadao ci
+                    ON ci.id_cidadao = tfv.co_fat_cidadao_pec
+                WHERE 
+                    tfv.co_dim_tempo IS NOT NULL
+                    AND to_date(tfv.co_dim_tempo::text,'YYYYMMDD') 
+                        >= (quadrimestre - interval '12 months')
+                    AND tdi.nu_identificador IN ('33','77')
+                GROUP BY 
+                    ci.id_cidadao
+                HAVING 
+                    COUNT(DISTINCT tfv.co_seq_fat_vacinacao) >= 1
+                ),
+            resultado as (
+                select
+                ci.id_cidadao,
+                ci.equipe,
+                ci.equipe_nome,
+                ci.cns,
+                ci.cpf,
+                ci,no_cidadao,
+                ci.dt_nasc,
+                ci.micro_area,
+                coalesce(i1.qtde_consultas, 0) as indicador_a,
+                coalesce(i2.qtde_antropometria, 0) as indicador_b,
+                coalesce(i3.qtde_visitas, 0) as indicador_c,
+                coalesce(i4.qtde_doses, 0) as indicador_d,
+                (case when coalesce(i1.qtde_consultas, 0) >= 1 then 1 else 0 end) +
+                (case when coalesce(i2.qtde_antropometria, 0) >= 1 then 1 else 0 end) +
+                (case when coalesce(i3.qtde_visitas, 0) >= 2 then 1 else 0 end) +
+                (case when coalesce(i4.qtde_doses, 0) >= 1 then 1 else 0 end) as qtde_indicadores_alcancados
+                from cidadao ci
+                left join indicador_1 i1 on i1.id_cidadao = ci.id_cidadao
+                left join indicador_2 i2 on i2.id_cidadao = ci.id_cidadao
+                left join indicador_3 i3 on i3.id_cidadao = ci.id_cidadao
+                left join indicador_4 i4 on i4.id_cidadao = ci.id_cidadao
+                order by ci.micro_area
+                ),
+                agregado as (
+                select
+                count(*) as qtde_idosos,
+                sum(qtde_indicadores_alcancados) as total_pontuacao,
+                round(((sum(qtde_indicadores_alcancados)::numeric * 25) / nullif(count(*), 0)), 2) as nota
+                from resultado r
+                )
+            SELECT
+                r.id_cidadao::bigint,
+                r.equipe::text,
+                r.equipe_nome::text,
+                (CASE WHEN r.cns = '0' THEN '*****' ELSE r.cns END)::text,
+                (CASE WHEN r.cpf = '0' THEN '*****' ELSE r.cpf END)::text,
+                r.no_cidadao::text,
+                to_char(r.dt_nasc, 'DD/MM/YYYY')::text as dt_nasc,
+                (case when r.micro_area = '--' then 'EM BRANCO' else R.MICRO_AREA end)::text,
+                r.indicador_a::integer,
+                r.indicador_b::integer,
+                r.indicador_c::integer,
+                r.indicador_d::integer,
+                r.qtde_indicadores_alcancados::integer,
+                r.qtde_indicadores_alcancados::integer * 25 as pontuacao,
+                round(a.nota, 2)::numeric as NOTA,
+                a.qtde_idosos::integer,
+                a.total_pontuacao::integer,   
+                'detalhe'::text AS tipo_linha
+            FROM resultado r
+            CROSS JOIN agregado a
+            UNION ALL
+            SELECT
+                NULL::bigint      AS id_cidadao,
+                NULL::text        AS equipe,
+                NULL::text        AS equipe_nome,
+                'resumo'::text    AS cns,
+                NULL::text        AS cpf,
+                NULL::text        AS no_cidadao,
+                NULL::text        AS dt_nasc,
+                NULL::text        AS micro_area,
+                NULL::integer     AS indicador_a,
+                NULL::integer     AS indicador_b,
+                NULL::integer     AS indicador_c,
+                NULL::integer     AS indicador_d,
+                NULL::integer     AS qtde_indicadores_alcancados,
+                NULL::integer     AS pontuacao,
+                round(a.nota, 2)::numeric,    
+                a.qtde_idosos::integer,
+                a.total_pontuacao::integer,   
+                'resumo'::text    AS tipo_linha
+            FROM agregado a;
+
+        end;
+        $$;`
+    },
+
+    {
+        name: "RESUMO SAUDE DO IDOSO",
+        definition: `create or replace function resumo_saude_idoso (
+        p_quadrimestre date
+        )
+        returns table(
+            ine_equipe					text,
+            nome_equipe					text,
+            qtde_idosos					integer,
+            indicador_a					integer,
+            indicador_b					integer,
+            indicador_c					integer,
+            indicador_d					integer,
+            qtd_indicadores_alcancado	integer,
+            pontuacao					integer,
+            nota						numeric
+            )
+        language sql
+        as $$	
+            with detalhe as (
+            select *
+            from saude_idoso(p_quadrimestre, null)
+            where resumo ='detalhe'	
+            )
+            select 
+            ine_equipe,
+            nome_equipe,
+            count(*) as total_idosos,
+            sum(case when indicador_a >= 1 then 1 else 0 end) as total_indicador_a,
+            sum(case when indicador_b >= 1 then 1 else 0 end) as total_indicador_b,
+            sum(case when indicador_c >= 2 then 1 else 0 end) as total_indicador_c,
+            sum(case when indicador_d >= 1 then 1 else 0 end) as total_indicador_d,
+            -- ✅ Total de indicadores alcançados pela equipe (de 0 a 4)
+            (
+                max(case when indicador_a >= 1 then 1 else 0 end) +
+                max(case when indicador_b >= 1 then 1 else 0 end) +
+                max(case when indicador_c >= 2 then 1 else 0 end) +
+                max(case when indicador_d >= 1 then 1 else 0 end) 
+            ) as total_indicadores_alcancados,
+            sum(pontuacao) as total_pontuacao,
+            ROUND((SUM(pontuacao)::numeric /  NULLIF(COUNT(*),0)), 2) AS nota
+            from detalhe
+            group by ine_equipe, nome_equipe
+            order by nome_equipe asc;
+        $$;`
     },
 
     { 
