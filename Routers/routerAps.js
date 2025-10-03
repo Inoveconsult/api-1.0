@@ -320,8 +320,9 @@ atencaobasica.get('/saude_idoso', async (req, res) => {
     equipe = null
   }
   try {
-    const result = await new apsRepository().saudeDoIdoso(quadrimestre, equipe);
-    res.status(200).send(result);
+    const result = await new apsRepository().listaIdosos(quadrimestre, equipe);
+    res.status(200).send(result);    
+    console.log(result)
   } catch (error) {
     res.status(500).send({error: 'Erro interno no servidor.'});
   }

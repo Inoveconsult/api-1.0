@@ -229,6 +229,15 @@ class apsRepository extends baseRopository{
       }
     }
 
+    async listaIdosos (p1, p2) {
+      try {
+        const result = await super.getIndicadoresQuadrimestres('listar_idosos', p1, p2);        
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
     async resumoSaudeIdoso (p1) {
       try {
         const result = await super.getResumido('resumo_saude_idoso', p1);
